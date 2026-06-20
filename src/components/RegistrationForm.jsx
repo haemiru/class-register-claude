@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Field, { inputCls } from './Field.jsx'
 import { requestCardPayment } from '../lib/toss.js'
-import { won } from '../lib/format.js'
+import { won, formatPhone } from '../lib/format.js'
 
 // Design Ref: §6, §7 — 신청서(이름·연락처) → 토스 결제위젯 호출
 export default function RegistrationForm({ cls, disabled }) {
@@ -50,9 +50,10 @@ export default function RegistrationForm({ cls, disabled }) {
         <input
           className={inputCls}
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => setPhone(formatPhone(e.target.value))}
           placeholder="010-1234-5678"
-          inputMode="tel"
+          inputMode="numeric"
+          maxLength={13}
         />
       </Field>
       {error && <p className="text-sm text-accent">{error}</p>}

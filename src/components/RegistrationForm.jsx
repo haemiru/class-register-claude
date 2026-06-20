@@ -7,6 +7,7 @@ import { won, formatPhone } from '../lib/format.js'
 export default function RegistrationForm({ cls, disabled }) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -20,7 +21,7 @@ export default function RegistrationForm({ cls, disabled }) {
     setSubmitting(true)
     try {
       // Plan SC-2: 신청 → 결제 흐름 진입
-      await requestCardPayment({ cls, name: name.trim(), phone: phone.trim() })
+      await requestCardPayment({ cls, name: name.trim(), phone: phone.trim(), note: note.trim() })
     } catch (err) {
       // 사용자가 결제창을 닫은 경우 등
       setError(err?.message || '결제를 시작하지 못했습니다.')
@@ -54,6 +55,16 @@ export default function RegistrationForm({ cls, disabled }) {
           placeholder="010-1234-5678"
           inputMode="numeric"
           maxLength={13}
+        />
+      </Field>
+      <Field label="강의에서 꼭 듣고 싶은 점" hint="미리 알려주시면 강의에 반영해 드려요. (선택)">
+        <textarea
+          className={inputCls}
+          rows={3}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="예: ○○가 가장 궁금해요"
+          maxLength={500}
         />
       </Field>
       {error && <p className="text-sm text-accent">{error}</p>}

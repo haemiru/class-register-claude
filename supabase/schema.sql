@@ -20,6 +20,7 @@ create table if not exists cr_registrations (
   class_id         uuid not null references cr_classes(id) on delete cascade,
   name             text not null,
   phone            text not null,
+  note             text,                              -- 신청자 사전 질문(선택)
   payment_status   text not null default 'pending',  -- 'pending'|'paid'|'failed'
   toss_payment_key text,
   toss_order_id    text unique,            -- 멱등성: 동일 주문 중복 승인 차단
@@ -90,13 +91,15 @@ grant execute on function cr_class_detail(uuid) to anon, authenticated;
 -- ── 정원 정합성 보강용 RPC (선택) ─────────────────────
 -- Design Ref: §4, §10 — 1차는 서버 count 확인, 부하 시 이 함수로 승격.
 -- 트랜잭션 내에서 paid 카운트 확인 후 insert (동시성 안전).
+drop function if exists cr_register_paid(uuid, text, text, text, text, int);
 create or replace function cr_register_paid(
   p_class_id uuid,
   p_name text,
   p_phone text,
   p_payment_key text,
   p_order_id text,
-  p_amount int
+  p_amount int,
+  p_note text default null
 ) returns cr_registrations
 language plpgsql
 as $$
@@ -119,9 +122,9 @@ begin
   end if;
 
   insert into cr_registrations
-    (class_id, name, phone, payment_status, toss_payment_key, toss_order_id, amount)
+    (class_id, name, phone, note, payment_status, toss_payment_key, toss_order_id, amount)
   values
-    (p_class_id, p_name, p_phone, 'paid', p_payment_key, p_order_id, p_amount)
+    (p_class_id, p_name, p_phone, p_note, 'paid', p_payment_key, p_order_id, p_amount)
   returning * into v_row;
 
   return v_row;

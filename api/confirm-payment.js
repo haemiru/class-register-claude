@@ -6,7 +6,7 @@ import { confirmPayment, cancelPayment } from './_lib/toss.js'
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'METHOD_NOT_ALLOWED' })
 
-  const { paymentKey, orderId, amount, classId, name, phone } = req.body || {}
+  const { paymentKey, orderId, amount, classId, name, phone, note } = req.body || {}
   if (!paymentKey || !orderId || !amount || !classId || !name || !phone) {
     return res.status(400).json({ error: 'INVALID_INPUT' })
   }
@@ -52,6 +52,7 @@ export default async function handler(req, res) {
       p_payment_key: paymentKey,
       p_order_id: orderId,
       p_amount: Number(amount),
+      p_note: note ? String(note).slice(0, 500) : null,
     })
 
     if (rpcErr) {

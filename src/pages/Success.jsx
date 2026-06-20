@@ -22,6 +22,7 @@ export default function Success() {
         classId: params.get('classId'),
         name: params.get('name'),
         phone: params.get('phone'),
+        note: params.get('note') || '',
       }
       try {
         const res = await fetch('/api/confirm-payment', {

@@ -63,6 +63,7 @@ export default function AdminRegistrations() {
                 <th className="px-4 py-2">이름</th>
                 <th className="px-4 py-2">연락처</th>
                 <th className="px-4 py-2">결제</th>
+                <th className="px-4 py-2">사전 질문</th>
                 <th className="px-4 py-2">신청시각</th>
               </tr>
             </thead>
@@ -81,6 +82,9 @@ export default function AdminRegistrations() {
                     >
                       {statusLabel[r.payment_status] || r.payment_status}
                     </span>
+                  </td>
+                  <td className="max-w-xs whitespace-pre-wrap px-4 py-2 text-slate-600">
+                    {r.note || <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-4 py-2 text-slate-500">{formatDateTime(r.created_at)}</td>
                 </tr>

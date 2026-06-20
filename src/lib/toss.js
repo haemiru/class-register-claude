@@ -4,7 +4,7 @@ import { makeOrderId } from './format.js'
 // Design Ref: §7 — 토스 결제위젯 호출. 성공 시 /success 로 리다이렉트.
 const clientKey = import.meta.env.VITE_TOSS_CLIENT_KEY
 
-export async function requestCardPayment({ cls, name, phone }) {
+export async function requestCardPayment({ cls, name, phone, note }) {
   if (!clientKey) throw new Error('VITE_TOSS_CLIENT_KEY 미설정 — .env를 확인하세요.')
 
   const orderId = makeOrderId()
@@ -14,6 +14,7 @@ export async function requestCardPayment({ cls, name, phone }) {
     name,
     phone,
   })
+  if (note) params.set('note', note)
   const origin = window.location.origin
   const toss = await loadTossPayments(clientKey)
 

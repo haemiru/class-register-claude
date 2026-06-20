@@ -4,7 +4,7 @@ import { requireAdmin } from '../../_lib/auth.js'
 // Design Ref: §5 — GET /api/admin/classes (목록) · POST (강의 등록)
 // Plan SC-1
 export default async function handler(req, res) {
-  if (!requireAdmin(req, res)) return
+  if (!(await requireAdmin(req, res))) return
 
   let supabase
   try {

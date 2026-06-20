@@ -24,10 +24,16 @@ npm run dev               # 프론트만 (localhost:5173)
 | `VITE_TOSS_CLIENT_KEY` | 클라이언트 | 토스 결제위젯 clientKey (test_ck_…) |
 | `SUPABASE_SERVICE_ROLE_KEY` | **서버 전용** | 서버리스 쓰기용 (노출 금지) |
 | `TOSS_SECRET_KEY` | **서버 전용** | 결제 승인 검증 (test_sk_…) |
-| `ADMIN_PASSWORD` | **서버 전용** | 관리자 로그인 비밀번호 |
-| `ADMIN_TOKEN_SECRET` | **서버 전용** | 토큰 서명용 시크릿 |
+| `ADMIN_EMAILS` | **서버 전용** | 관리자 허용 Google 계정(쉼표로 여러 개) |
 
 > ⚠️ 서버 전용 키에는 `VITE_` 접두사를 붙이지 마세요. 붙이면 클라이언트 번들에 노출됩니다.
+
+### 관리자 인증 (Google 로그인)
+
+- 관리자 페이지는 **Supabase Auth의 Google OAuth**로 로그인하며, `ADMIN_EMAILS`에 등록된 계정만 통과합니다.
+- Supabase 대시보드 → **Authentication → Providers → Google** 활성화 필요
+  (Google Cloud Console에서 OAuth 클라이언트 ID/시크릿 발급 후 등록).
+- Authorized redirect URI에 `https://<배포도메인>/admin` 과 Supabase 콜백 URL을 등록하세요.
 
 ## Supabase 준비
 

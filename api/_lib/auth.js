@@ -1,46 +1,44 @@
-import crypto from 'node:crypto'
-// Design Ref: §5, §10 — 관리자 인증: 단일 비밀번호 검증 → HMAC 서명 토큰(만료 포함)
+import { createClient } from '@supabase/supabase-js'
+// Design Ref: §5, §10 — 관리자 인증: Google OAuth(Supabase Auth) access_token 검증 + 이메일 허용목록(ADMIN_EMAILS)
 
-const SECRET = process.env.ADMIN_TOKEN_SECRET || process.env.ADMIN_PASSWORD || 'dev-secret'
-const TTL_MS = 1000 * 60 * 60 * 8 // 8시간
+const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
+const anonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
 
-function sign(payloadB64) {
-  return crypto.createHmac('sha256', SECRET).update(payloadB64).digest('base64url')
+// 쉼표로 구분된 관리자 이메일 목록 (소문자 비교)
+function adminEmails() {
+  return (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
 }
 
-export function verifyPassword(input) {
-  const pw = process.env.ADMIN_PASSWORD
-  if (!pw) throw new Error('SERVER_MISCONFIG: ADMIN_PASSWORD 미설정')
-  // 타이밍 안전 비교
-  const a = Buffer.from(String(input || ''))
-  const b = Buffer.from(pw)
-  return a.length === b.length && crypto.timingSafeEqual(a, b)
+export function isAdminEmail(email) {
+  if (!email) return false
+  return adminEmails().includes(String(email).toLowerCase())
 }
 
-export function issueToken() {
-  const payload = { exp: Date.now() + TTL_MS }
-  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString('base64url')
-  return `${payloadB64}.${sign(payloadB64)}`
+// Bearer 토큰(=Supabase access_token) 검증 → 사용자 반환(없으면 null)
+async function getUserFromToken(token) {
+  if (!token || !url || !anonKey) return null
+  const supabase = createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const { data, error } = await supabase.auth.getUser(token)
+  if (error || !data?.user) return null
+  return data.user
 }
 
-export function isValidToken(token) {
-  if (!token || !token.includes('.')) return false
-  const [payloadB64, sig] = token.split('.')
-  if (sign(payloadB64) !== sig) return false
-  try {
-    const { exp } = JSON.parse(Buffer.from(payloadB64, 'base64url').toString())
-    return typeof exp === 'number' && Date.now() < exp
-  } catch {
-    return false
-  }
-}
-
-// 관리자 라우트 가드. 유효하면 true, 아니면 401 응답 후 false.
-export function requireAdmin(req, res) {
+// 관리자 라우트 가드. 유효 토큰 + 허용 이메일이면 true, 아니면 401/403 응답 후 false.
+export async function requireAdmin(req, res) {
   const header = req.headers.authorization || ''
   const token = header.startsWith('Bearer ') ? header.slice(7) : ''
-  if (!isValidToken(token)) {
+  const user = await getUserFromToken(token)
+  if (!user) {
     res.status(401).json({ error: 'UNAUTHORIZED' })
+    return false
+  }
+  if (!isAdminEmail(user.email)) {
+    res.status(403).json({ error: 'FORBIDDEN' })
     return false
   }
   return true

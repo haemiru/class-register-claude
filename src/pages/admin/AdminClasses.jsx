@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { adminApi, clearToken, getToken } from '../../lib/adminApi.js'
+import { adminApi, getSession, signOut } from '../../lib/adminApi.js'
 import Field, { inputCls } from '../../components/Field.jsx'
 import { won, formatDateTime } from '../../lib/format.js'
 
@@ -16,11 +16,13 @@ export default function AdminClasses() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (!getToken()) {
-      nav('/admin')
-      return
-    }
-    load()
+    ;(async () => {
+      if (!(await getSession())) {
+        nav('/admin')
+        return
+      }
+      load()
+    })()
   }, [])
 
   async function load() {
@@ -28,8 +30,8 @@ export default function AdminClasses() {
       const { classes } = await adminApi.listClasses()
       setClasses(classes)
     } catch (e) {
-      if (e.status === 401) {
-        clearToken()
+      if (e.status === 401 || e.status === 403) {
+        await signOut()
         nav('/admin')
       } else setError('목록을 불러오지 못했습니다.')
     } finally {
@@ -75,8 +77,8 @@ export default function AdminClasses() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-900">강의 관리</h1>
         <button
-          onClick={() => {
-            clearToken()
+          onClick={async () => {
+            await signOut()
             nav('/admin')
           }}
           className="text-sm text-slate-500 hover:text-accent"

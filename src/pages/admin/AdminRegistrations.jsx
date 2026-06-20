@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { adminApi, clearToken, getToken } from '../../lib/adminApi.js'
+import { adminApi, getSession, signOut } from '../../lib/adminApi.js'
 import { won, formatDateTime } from '../../lib/format.js'
 
 // Design Ref: §6 — 강의별 신청자 목록 (Plan SC-5)
@@ -14,17 +14,17 @@ export default function AdminRegistrations() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!getToken()) {
-      nav('/admin')
-      return
-    }
     ;(async () => {
+      if (!(await getSession())) {
+        nav('/admin')
+        return
+      }
       try {
         const res = await adminApi.listRegistrations(id)
         setData(res)
       } catch (e) {
-        if (e.status === 401) {
-          clearToken()
+        if (e.status === 401 || e.status === 403) {
+          await signOut()
           nav('/admin')
         } else setError('신청자 목록을 불러오지 못했습니다.')
       } finally {

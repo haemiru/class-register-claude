@@ -5,7 +5,7 @@ import { requireAdmin } from '../_lib/auth.js'
 // Do 단계 결정: 중첩 동적 라우트 대신 query param 으로 단순화.
 // Plan SC-5
 export default async function handler(req, res) {
-  if (!requireAdmin(req, res)) return
+  if (!(await requireAdmin(req, res))) return
   if (req.method !== 'GET') return res.status(405).json({ error: 'METHOD_NOT_ALLOWED' })
 
   const { classId } = req.query

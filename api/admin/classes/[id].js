@@ -5,7 +5,7 @@ import { requireAdmin } from '../../_lib/auth.js'
 const EDITABLE = ['title', 'description', 'location', 'starts_at', 'capacity', 'fee', 'status']
 
 export default async function handler(req, res) {
-  if (!requireAdmin(req, res)) return
+  if (!(await requireAdmin(req, res))) return
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'METHOD_NOT_ALLOWED' })
 
   const { id } = req.query

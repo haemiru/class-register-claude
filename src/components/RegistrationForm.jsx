@@ -57,7 +57,7 @@ export default function RegistrationForm({ cls, disabled }) {
           maxLength={13}
         />
       </Field>
-      <Field label="강의에서 꼭 듣고 싶은 점" hint="미리 알려주시면 강의에 반영해 드려요. (선택)">
+      <Field label="이번에 꼭 알고 싶은 한가지" hint="미리 알려주시면 강의에 반영해 드려요. (선택)">
         <textarea
           className={inputCls}
           rows={3}

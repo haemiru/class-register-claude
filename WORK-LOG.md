@@ -36,14 +36,12 @@
 - **바이브 코딩 리디자인**: 다크 테마, 오로라 배경, 글래스 카드, 그라데이션 버튼, 히어로 섹션 (결제 폼만 신뢰감 위해 밝은 카드 유지)
 - ✅ 매 변경마다 `npm run build` 통과
 
+### 2026-06-22 세션
+- **✅ Supabase 마이그레이션 실행 완료**: `cr_registrations.note` 컬럼 추가 + `cr_register_paid` 7-인자(`p_note`)로 재생성. SQL Editor에서 검증(컬럼·RPC 인자 확인) 후 적용. 이제 사전 질문 입력 → 저장 → 관리자 목록 표시 전 구간 연결됨
+- **사전 질문 라벨 변경**: `강의에서 꼭 듣고 싶은 점` → `이번에 꼭 알고 싶은 한가지`
+
 ## 4. 다음 할 일 (돌아오면 여기부터)
-1. **⚠️ Supabase 마이그레이션 실행 필요** (note 추가분 — 아직 SQL Editor에서 안 돌렸으면):
-   ```sql
-   alter table cr_registrations add column if not exists note text;
-   drop function if exists cr_register_paid(uuid, text, text, text, text, int);
-   -- 이후 schema.sql 의 새 cr_register_paid(p_note 포함) 재생성
-   ```
-2. **결제 흐름 E2E 테스트**: 토스 테스트 키로 신청→결제→완료→관리자 목록 확인
+1. **결제 흐름 E2E 테스트**: 토스 테스트 키로 신청→결제→완료→관리자 목록 확인
 3. 히어로 문구/서브카피 실제 강의 성격에 맞게 확정 (현재 임시: "코딩, 바이브로 시작하세요")
 4. 실 운영 키 전환 (토스 라이브 키), 도메인 연결 시 Supabase Redirect URLs 추가
 

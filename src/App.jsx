@@ -4,6 +4,7 @@ import ClassList from './pages/ClassList.jsx'
 import ClassDetail from './pages/ClassDetail.jsx'
 import Success from './pages/Success.jsx'
 import Fail from './pages/Fail.jsx'
+import My from './pages/My.jsx'
 import AdminLogin from './pages/admin/AdminLogin.jsx'
 import AdminClasses from './pages/admin/AdminClasses.jsx'
 import AdminRegistrations from './pages/admin/AdminRegistrations.jsx'
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/class/:id" element={<ClassDetail />} />
           <Route path="/success" element={<Success />} />
           <Route path="/fail" element={<Fail />} />
+          <Route path="/my" element={<My />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/classes" element={<AdminClasses />} />
           <Route path="/admin/classes/:id" element={<AdminRegistrations />} />

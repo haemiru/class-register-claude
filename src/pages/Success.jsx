@@ -84,9 +84,22 @@ export default function Success() {
           <Row label="결제상태" value="결제완료 ✅" />
         </dl>
       </div>
-      <Link to="/" className="inline-block text-sm text-violet-300 transition hover:text-cyan-300">
-        강의 목록으로
-      </Link>
+      {reg?.access_token && (
+        <div className="space-y-2">
+          <Link
+            to={`/my?token=${reg.access_token}`}
+            className="btn-gradient inline-block rounded-xl px-6 py-3 text-sm font-semibold"
+          >
+            📂 내 강의 자료 받기
+          </Link>
+          <p className="text-xs text-slate-500">이 링크를 저장해 두면 강의 당일에도 다시 받을 수 있습니다.</p>
+        </div>
+      )}
+      <div>
+        <Link to="/" className="inline-block text-sm text-violet-300 transition hover:text-cyan-300">
+          강의 목록으로
+        </Link>
+      </div>
     </div>
   )
 }

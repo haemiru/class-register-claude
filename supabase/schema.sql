@@ -25,15 +25,38 @@ create table if not exists cr_registrations (
   toss_payment_key text,
   toss_order_id    text unique,            -- 멱등성: 동일 주문 중복 승인 차단
   amount           int,
+  access_token     uuid not null default gen_random_uuid(),  -- 결제자 개인 자료 링크 토큰
   created_at       timestamptz not null default now()
 );
 
 create index if not exists cr_reg_class_paid_idx
   on cr_registrations(class_id, payment_status);
+create unique index if not exists cr_reg_access_token_idx
+  on cr_registrations(access_token);
+
+-- ── 강의 자료 ─────────────────────────────────────────
+-- Design Ref: §4 — 강의별 첨부 자료. 결제 완료자만 다운로드(서버 서명 URL 경유).
+create table if not exists cr_materials (
+  id           uuid primary key default gen_random_uuid(),
+  class_id     uuid not null references cr_classes(id) on delete cascade,
+  file_name    text not null,              -- 원본 파일명(표시용)
+  storage_path text not null,              -- cr-materials 버킷 내 경로
+  size         int,
+  created_at   timestamptz not null default now()
+);
+create index if not exists cr_materials_class_idx on cr_materials(class_id);
 
 -- ── RLS ───────────────────────────────────────────────
 alter table cr_classes        enable row level security;
 alter table cr_registrations  enable row level security;
+alter table cr_materials      enable row level security;
+-- cr_materials 는 anon 정책 없음 → 직접 접근 차단(서버 service_role 경유만).
+
+-- ── Storage: 강의 자료 비공개 버킷 ───────────────────
+-- 업로드/다운로드 모두 서버(service_role)·서명 URL 경유. anon 직접 접근 불가.
+insert into storage.buckets (id, name, public)
+values ('cr-materials', 'cr-materials', false)
+on conflict (id) do nothing;
 
 -- 공개 강의(open)만 anon 조회 허용. 쓰기는 전부 service_role(서버)만.
 drop policy if exists cr_classes_public_read on cr_classes;

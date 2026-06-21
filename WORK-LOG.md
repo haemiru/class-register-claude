@@ -39,9 +39,35 @@
 ### 2026-06-22 세션
 - **✅ Supabase 마이그레이션 실행 완료**: `cr_registrations.note` 컬럼 추가 + `cr_register_paid` 7-인자(`p_note`)로 재생성. SQL Editor에서 검증(컬럼·RPC 인자 확인) 후 적용. 이제 사전 질문 입력 → 저장 → 관리자 목록 표시 전 구간 연결됨
 - **사전 질문 라벨 변경**: `강의에서 꼭 듣고 싶은 점` → `이번에 꼭 알고 싶은 한가지`
+- **강의 자료 다운로드 기능 추가** (결제 완료자 전용):
+  - 접근 방식: **개인 토큰 링크** — `cr_registrations.access_token`(UUID) 발급 → 완료 화면 "내 강의 자료 받기" 링크 → `/my?token=...` (북마크 가능, 강의 당일 재접속 OK)
+  - 저장: Supabase **비공개 버킷 `cr-materials`**. 업로드/다운로드 모두 서버(service_role)·서명 URL 경유, anon 직접 접근 차단
+  - 관리자 업로드: 서명 업로드 URL(`createSignedUploadUrl` → `uploadToSignedUrl` → confirm) 방식으로 서버리스 4.5MB 제한 회피. 강의당 **여러 파일** 추가/삭제
+  - 다운로드: `/api/my` 가 토큰→paid 신청 검증 후 60초 서명 URL 발급(원본 파일명 download)
+  - 신규: `cr_materials` 테이블, `api/admin/materials.js`, `api/my.js`, `src/pages/My.jsx`, AdminClasses 자료 관리 UI
+  - ✅ `npm run build` 통과
 
 ## 4. 다음 할 일 (돌아오면 여기부터)
-1. **결제 흐름 E2E 테스트**: 토스 테스트 키로 신청→결제→완료→관리자 목록 확인
+1. **⚠️ Supabase 마이그레이션 실행 필요** (자료 기능 — SQL Editor에서 아래 실행):
+   ```sql
+   -- 1) 개인 토큰
+   alter table cr_registrations add column if not exists access_token uuid not null default gen_random_uuid();
+   create unique index if not exists cr_reg_access_token_idx on cr_registrations(access_token);
+   -- 2) 자료 테이블
+   create table if not exists cr_materials (
+     id uuid primary key default gen_random_uuid(),
+     class_id uuid not null references cr_classes(id) on delete cascade,
+     file_name text not null, storage_path text not null, size int,
+     created_at timestamptz not null default now());
+   create index if not exists cr_materials_class_idx on cr_materials(class_id);
+   alter table cr_materials enable row level security;
+   -- 3) 비공개 버킷
+   insert into storage.buckets (id, name, public) values ('cr-materials','cr-materials',false)
+     on conflict (id) do nothing;
+   -- 4) RPC 재생성(access_token 반환 위해) — schema.sql 의 cr_register_paid 전체 블록 다시 실행
+   ```
+   → 실행 후 검증: `select column_name from information_schema.columns where table_name='cr_registrations' and column_name='access_token';`
+2. **결제 흐름 E2E 테스트**: 토스 테스트 키로 신청→결제→완료→**내 자료 다운로드**→관리자 목록 확인
 3. 히어로 문구/서브카피 실제 강의 성격에 맞게 확정 (현재 임시: "코딩, 바이브로 시작하세요")
 4. 실 운영 키 전환 (토스 라이브 키), 도메인 연결 시 Supabase Redirect URLs 추가
 

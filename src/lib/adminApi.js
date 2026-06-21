@@ -50,4 +50,20 @@ export const adminApi = {
   createClass: (data) => req('/classes', { method: 'POST', body: data }),
   updateClass: (id, data) => req(`/classes/${id}`, { method: 'PATCH', body: data }),
   listRegistrations: (classId) => req(`/registrations?classId=${classId}`),
+  // 강의 자료
+  listMaterials: (classId) => req(`/materials?classId=${classId}`),
+  signMaterialUpload: (classId, fileName) =>
+    req('/materials', { method: 'POST', body: { action: 'sign', classId, fileName } }),
+  confirmMaterial: (data) => req('/materials', { method: 'POST', body: { action: 'confirm', ...data } }),
+  deleteMaterial: (id) => req(`/materials?id=${id}`, { method: 'DELETE' }),
+}
+
+const MATERIAL_BUCKET = 'cr-materials'
+
+// 자료 업로드: sign → Storage 직접 업로드(서명 URL) → confirm
+export async function uploadMaterial(classId, file) {
+  const { token, storagePath } = await adminApi.signMaterialUpload(classId, file.name)
+  const { error } = await supabase.storage.from(MATERIAL_BUCKET).uploadToSignedUrl(storagePath, token, file)
+  if (error) throw new Error('업로드 실패')
+  return adminApi.confirmMaterial({ classId, fileName: file.name, size: file.size, storagePath })
 }

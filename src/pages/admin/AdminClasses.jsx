@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { adminApi, getSession, signOut } from '../../lib/adminApi.js'
+import { adminApi, getSession, signOut, uploadMaterial } from '../../lib/adminApi.js'
 import Field, { inputCls } from '../../components/Field.jsx'
-import { won, formatDateTime } from '../../lib/format.js'
+import { won, formatDateTime, formatBytes } from '../../lib/format.js'
 
 // Design Ref: §6 — 관리자 강의 관리: 등록 폼 + 목록(수정/마감)
 const empty = { title: '', description: '', location: '', starts_at: '', capacity: 20, fee: 0 }
@@ -153,11 +153,89 @@ export default function AdminClasses() {
                     {c.status === 'open' ? '마감 처리' : '재오픈'}
                   </button>
                 </div>
+                <MaterialManager classId={c.id} />
               </div>
             ))}
           </div>
         )}
       </section>
+    </div>
+  )
+}
+
+// 강의별 자료 관리: 목록 + 업로드 + 삭제
+function MaterialManager({ classId }) {
+  const [materials, setMaterials] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const { materials } = await adminApi.listMaterials(classId)
+        setMaterials(materials)
+      } catch {
+        setError('자료를 불러오지 못했습니다.')
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [classId])
+
+  async function onUpload(e) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // 같은 파일 재선택 허용
+    if (!file) return
+    setError('')
+    setUploading(true)
+    try {
+      const { material } = await uploadMaterial(classId, file)
+      setMaterials((prev) => [...prev, material])
+    } catch {
+      setError('업로드에 실패했습니다.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function onDelete(id) {
+    if (!confirm('이 자료를 삭제할까요?')) return
+    try {
+      await adminApi.deleteMaterial(id)
+      setMaterials((prev) => prev.filter((m) => m.id !== id))
+    } catch {
+      setError('삭제에 실패했습니다.')
+    }
+  }
+
+  return (
+    <div className="mt-3 border-t border-slate-100 pt-3">
+      <div className="mb-2 text-xs font-semibold text-slate-500">강의 자료 (결제 완료자만 다운로드)</div>
+      {loading ? (
+        <p className="text-xs text-slate-400">불러오는 중…</p>
+      ) : materials.length === 0 ? (
+        <p className="text-xs text-slate-400">등록된 자료가 없습니다.</p>
+      ) : (
+        <ul className="space-y-1">
+          {materials.map((m) => (
+            <li key={m.id} className="flex items-center justify-between gap-3 text-sm">
+              <span className="min-w-0 truncate text-slate-700">
+                {m.file_name}
+                {m.size != null && <span className="ml-2 text-xs text-slate-400">{formatBytes(m.size)}</span>}
+              </span>
+              <button onClick={() => onDelete(m.id)} className="shrink-0 text-xs text-accent underline">
+                삭제
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <label className="mt-2 inline-block cursor-pointer text-sm text-brand underline">
+        {uploading ? '업로드 중…' : '+ 파일 추가'}
+        <input type="file" className="hidden" onChange={onUpload} disabled={uploading} />
+      </label>
+      {error && <p className="mt-1 text-xs text-accent">{error}</p>}
     </div>
   )
 }

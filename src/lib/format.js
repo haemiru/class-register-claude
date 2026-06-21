@@ -31,6 +31,14 @@ export function formatPhone(value) {
   return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7, 11)}`
 }
 
+// 파일 크기 사람이 읽기 쉬운 형식 (B/KB/MB)
+export function formatBytes(n) {
+  const b = Number(n || 0)
+  if (b < 1024) return `${b} B`
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(0)} KB`
+  return `${(b / 1024 / 1024).toFixed(1)} MB`
+}
+
 // 토스 orderId 생성 (Date.now 사용 가능한 브라우저 런타임)
 export function makeOrderId() {
   return `cr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`

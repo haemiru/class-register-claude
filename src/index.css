@@ -2,7 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: dark;
+}
+
 body {
-  @apply bg-slate-50 text-slate-800 antialiased;
+  @apply bg-ink text-slate-200 antialiased;
   font-family: 'Pretendard', system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif;
+}
+
+@layer components {
+  /* 보라→시안 그라데이션 텍스트 */
+  .text-gradient {
+    @apply bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent;
+  }
+
+  /* 글래스 카드 */
+  .glass {
+    @apply rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl;
+  }
+
+  /* 그라데이션 버튼 */
+  .btn-gradient {
+    @apply bg-gradient-to-r from-violet-500 to-cyan-500 font-semibold text-white shadow-lg shadow-violet-500/25 transition hover:shadow-violet-500/40 hover:brightness-110 disabled:opacity-50 disabled:hover:brightness-100;
+  }
+}
+
+/* 은은한 그리드 배경 */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
 }

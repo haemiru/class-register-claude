@@ -20,12 +20,12 @@ export default function ClassDetail() {
     })()
   }, [id])
 
-  if (loading) return <p className="text-slate-400">불러오는 중…</p>
+  if (loading) return <p className="py-10 text-center text-slate-400">불러오는 중…</p>
   if (error)
     return (
-      <div className="space-y-4">
-        <p className="text-accent">{error}</p>
-        <Link to="/" className="text-sm text-brand underline">
+      <div className="space-y-4 py-10 text-center">
+        <p className="text-rose-400">{error}</p>
+        <Link to="/" className="text-sm text-violet-300 transition hover:text-cyan-300">
           ← 강의 목록으로
         </Link>
       </div>
@@ -36,31 +36,50 @@ export default function ClassDetail() {
 
   return (
     <article className="space-y-6">
-      <Link to="/" className="text-sm text-brand underline">
+      <Link to="/" className="inline-flex items-center gap-1 text-sm text-slate-400 transition hover:text-white">
         ← 강의 목록으로
       </Link>
 
-      <header className="space-y-2">
-        <h1 className="text-2xl font-bold text-slate-900">{cls.title}</h1>
-        <div className="space-y-1 text-sm text-slate-600">
-          <div>📅 {formatDateTime(cls.starts_at)}</div>
-          <div>📍 {cls.location}</div>
-          <div>
-            👥 정원 {cls.paidCount}/{cls.capacity}명 · 💳 {won(cls.fee)}
-          </div>
+      <header className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-extrabold leading-snug text-white sm:text-3xl">{cls.title}</h1>
+          {!closed && (
+            <span className="mt-1 shrink-0 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-0.5 text-xs font-medium text-cyan-300">
+              모집중
+            </span>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2 text-sm">
+          <Chip>📅 {formatDateTime(cls.starts_at)}</Chip>
+          <Chip>📍 {cls.location}</Chip>
+          <Chip>
+            👥 {cls.paidCount}/{cls.capacity}명
+          </Chip>
+          <Chip className="font-mono font-bold text-white">💳 {won(cls.fee)}</Chip>
         </div>
       </header>
 
       {cls.description && (
-        <p className="whitespace-pre-wrap rounded-lg bg-white p-4 text-sm leading-relaxed text-slate-700 shadow-sm">
+        <p className="glass whitespace-pre-wrap p-5 text-sm leading-relaxed text-slate-300">
           {cls.description}
         </p>
       )}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-bold text-slate-900">신청하기</h2>
+      <section className="rounded-2xl bg-white p-6 shadow-2xl shadow-black/30 ring-1 ring-white/10">
+        <h2 className="mb-1 text-lg font-bold text-slate-900">신청하기</h2>
+        <p className="mb-5 text-xs text-slate-500">아래 정보를 입력하고 결제하면 신청이 완료됩니다.</p>
         <RegistrationForm cls={cls} disabled={closed} />
       </section>
     </article>
+  )
+}
+
+function Chip({ children, className = '' }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-slate-300 ${className}`}
+    >
+      {children}
+    </span>
   )
 }

@@ -75,7 +75,7 @@ export default function AdminClasses() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">강의 관리</h1>
+        <h1 className="text-xl font-bold text-white">강의 관리</h1>
         <button
           onClick={async () => {
             await signOut()
@@ -121,7 +121,7 @@ export default function AdminClasses() {
 
       {/* 목록 */}
       <section>
-        <h2 className="mb-3 font-bold text-slate-800">등록된 강의</h2>
+        <h2 className="mb-3 font-bold text-slate-200">등록된 강의</h2>
         {loading ? (
           <p className="text-slate-400">불러오는 중…</p>
         ) : classes.length === 0 ? (

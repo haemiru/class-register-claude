@@ -71,7 +71,7 @@ export default function RegistrationForm({ cls, disabled }) {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-lg bg-brand py-3 font-semibold text-white transition hover:bg-brand-dark disabled:opacity-50"
+        className="btn-gradient w-full rounded-xl py-3.5"
       >
         {submitting ? '결제창 여는 중…' : `${won(cls.fee)} 결제하고 신청`}
       </button>

@@ -52,44 +52,50 @@ export default function Success() {
   }, [params])
 
   if (state === 'confirming')
-    return <p className="text-slate-500">결제를 확인하고 있습니다…</p>
+    return (
+      <p className="py-16 text-center font-mono text-sm text-slate-400">
+        <span className="animate-pulse">결제를 확인하고 있습니다…</span>
+      </p>
+    )
 
   if (state === 'error')
     return (
-      <div className="space-y-4 text-center">
-        <div className="text-4xl">⚠️</div>
-        <h1 className="text-xl font-bold text-slate-900">신청을 완료하지 못했습니다</h1>
-        <p className="text-sm text-slate-600">{message}</p>
-        <Link to="/" className="inline-block text-sm text-brand underline">
+      <div className="space-y-4 py-10 text-center">
+        <div className="text-5xl">⚠️</div>
+        <h1 className="text-xl font-bold text-white">신청을 완료하지 못했습니다</h1>
+        <p className="mx-auto max-w-sm text-sm text-slate-400">{message}</p>
+        <Link to="/" className="inline-block text-sm text-violet-300 transition hover:text-cyan-300">
           강의 목록으로
         </Link>
       </div>
     )
 
   return (
-    <div className="space-y-5 text-center">
-      <div className="text-5xl">🎉</div>
-      <h1 className="text-xl font-bold text-slate-900">신청이 완료되었습니다</h1>
-      <div className="mx-auto max-w-sm rounded-xl border border-slate-200 bg-white p-5 text-left text-sm shadow-sm">
-        <dl className="space-y-2">
+    <div className="space-y-6 py-8 text-center">
+      <div className="animate-float text-6xl">🎉</div>
+      <h1 className="text-2xl font-extrabold text-white">
+        신청이 <span className="text-gradient">완료</span>되었습니다
+      </h1>
+      <div className="glass mx-auto max-w-sm p-6 text-left text-sm">
+        <dl className="space-y-3">
           <Row label="신청자" value={reg?.name} />
           <Row label="연락처" value={reg?.phone} />
-          <Row label="결제금액" value={won(reg?.amount)} />
+          <Row label="결제금액" value={won(reg?.amount)} mono />
           <Row label="결제상태" value="결제완료 ✅" />
         </dl>
       </div>
-      <Link to="/" className="inline-block text-sm text-brand underline">
+      <Link to="/" className="inline-block text-sm text-violet-300 transition hover:text-cyan-300">
         강의 목록으로
       </Link>
     </div>
   )
 }
 
-function Row({ label, value }) {
+function Row({ label, value, mono }) {
   return (
-    <div className="flex justify-between">
-      <dt className="text-slate-500">{label}</dt>
-      <dd className="font-medium text-slate-800">{value}</dd>
+    <div className="flex justify-between gap-4">
+      <dt className="text-slate-400">{label}</dt>
+      <dd className={`font-medium text-white ${mono ? 'font-mono' : ''}`}>{value}</dd>
     </div>
   )
 }

@@ -4,12 +4,22 @@ export default {
   theme: {
     extend: {
       colors: {
-        brand: {
-          DEFAULT: '#2C5F8D',
-          dark: '#234c70',
-          light: '#eaf2fa',
+        // 바이브 코딩 테마 — 보라(brand) + 시안(accent)
+        brand: { DEFAULT: '#8b5cf6', dark: '#7c3aed', light: '#ede9fe' },
+        accent: '#22d3ee',
+        ink: { DEFAULT: '#0b0b12', 800: '#13131d', 700: '#1b1b28' },
+      },
+      fontFamily: {
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+      },
+      keyframes: {
+        float: {
+          '0%,100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-12px)' },
         },
-        accent: '#FF9933',
+      },
+      animation: {
+        float: 'float 7s ease-in-out infinite',
       },
     },
   },

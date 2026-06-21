@@ -49,7 +49,7 @@ export default function AdminLogin() {
 
   return (
     <div className="mx-auto max-w-sm">
-      <h1 className="mb-4 text-xl font-bold text-slate-900">관리자 로그인</h1>
+      <h1 className="mb-4 text-xl font-bold text-white">관리자 로그인</h1>
       <div className="space-y-4 rounded-xl border bg-white p-5 shadow-sm">
         {status === 'checking' && <p className="text-slate-400">확인 중…</p>}
 

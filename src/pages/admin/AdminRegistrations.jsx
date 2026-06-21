@@ -40,7 +40,7 @@ export default function AdminRegistrations() {
       <Link to="/admin/classes" className="text-sm text-brand underline">
         ← 강의 관리로
       </Link>
-      <h1 className="text-xl font-bold text-slate-900">
+      <h1 className="text-xl font-bold text-white">
         신청자 {data.class ? `· ${data.class.title}` : ''}
       </h1>
       {data.class && (

@@ -6,11 +6,11 @@ export default function Fail() {
   const message = params.get('message') || '결제가 취소되었거나 실패했습니다.'
 
   return (
-    <div className="space-y-4 text-center">
-      <div className="text-4xl">❌</div>
-      <h1 className="text-xl font-bold text-slate-900">결제가 완료되지 않았습니다</h1>
-      <p className="text-sm text-slate-600">{message}</p>
-      <Link to="/" className="inline-block text-sm text-brand underline">
+    <div className="space-y-4 py-10 text-center">
+      <div className="text-5xl">❌</div>
+      <h1 className="text-xl font-bold text-white">결제가 완료되지 않았습니다</h1>
+      <p className="mx-auto max-w-sm text-sm text-slate-400">{message}</p>
+      <Link to="/" className="inline-block text-sm text-violet-300 transition hover:text-cyan-300">
         강의 목록으로 돌아가기
       </Link>
     </div>

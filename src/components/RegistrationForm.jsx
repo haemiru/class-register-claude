@@ -1,10 +1,13 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Field, { inputCls } from './Field.jsx'
 import { requestCardPayment } from '../lib/toss.js'
 import { won, formatPhone } from '../lib/format.js'
 
-// Design Ref: §6, §7 — 신청서(이름·연락처) → 토스 결제위젯 호출
+// Design Ref: §6, §7 — 신청서(이름·연락처) → 토스 결제위젯 호출(유료) / 무료는 결제 생략
 export default function RegistrationForm({ cls, disabled }) {
+  const nav = useNavigate()
+  const isFree = Number(cls.fee) === 0
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [note, setNote] = useState('')
@@ -20,11 +23,27 @@ export default function RegistrationForm({ cls, disabled }) {
     }
     setSubmitting(true)
     try {
-      // Plan SC-2: 신청 → 결제 흐름 진입
+      if (isFree) {
+        // 무료 강의: 토스는 0원 결제 불가 → 결제 생략하고 바로 신청 확정
+        const res = await fetch('/api/register-free', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ classId: cls.id, name: name.trim(), phone: phone.trim(), note: note.trim() }),
+        })
+        const json = await res.json()
+        if (!res.ok) {
+          setError(json.error === 'FULL' ? '아쉽게도 정원이 마감되었습니다.' : '신청을 완료하지 못했습니다.')
+          setSubmitting(false)
+          return
+        }
+        nav(`/success?free=1&token=${json.registration.access_token}`)
+        return
+      }
+      // Plan SC-2: 유료 신청 → 결제 흐름 진입
       await requestCardPayment({ cls, name: name.trim(), phone: phone.trim(), note: note.trim() })
     } catch (err) {
       // 사용자가 결제창을 닫은 경우 등
-      setError(err?.message || '결제를 시작하지 못했습니다.')
+      setError(err?.message || (isFree ? '신청을 시작하지 못했습니다.' : '결제를 시작하지 못했습니다.'))
       setSubmitting(false)
     }
   }
@@ -73,7 +92,13 @@ export default function RegistrationForm({ cls, disabled }) {
         disabled={submitting}
         className="btn-gradient w-full rounded-xl py-3.5"
       >
-        {submitting ? '결제창 여는 중…' : `${won(cls.fee)} 결제하고 신청`}
+        {submitting
+          ? isFree
+            ? '신청하는 중…'
+            : '결제창 여는 중…'
+          : isFree
+            ? '무료로 신청하기'
+            : `${won(cls.fee)} 결제하고 신청`}
       </button>
     </form>
   )

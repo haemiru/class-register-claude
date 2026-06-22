@@ -15,6 +15,25 @@ export default function Success() {
     if (ran.current) return // StrictMode 이중 호출 방지(멱등이지만 UX)
     ran.current = true
     ;(async () => {
+      // 무료 신청: 결제 승인 없이 토큰으로 신청 정보 조회
+      if (params.get('free')) {
+        const token = params.get('token')
+        try {
+          const res = await fetch(`/api/my?token=${encodeURIComponent(token)}`)
+          const json = await res.json()
+          if (!res.ok) {
+            setState('error')
+            setMessage('신청 정보를 확인하지 못했습니다.')
+            return
+          }
+          setReg({ name: json.name, amount: 0, access_token: token })
+          setState('done')
+        } catch {
+          setState('error')
+          setMessage('서버와 통신하지 못했습니다.')
+        }
+        return
+      }
       const body = {
         paymentKey: params.get('paymentKey'),
         orderId: params.get('orderId'),
@@ -79,9 +98,18 @@ export default function Success() {
       <div className="glass mx-auto max-w-sm p-6 text-left text-sm">
         <dl className="space-y-3">
           <Row label="신청자" value={reg?.name} />
-          <Row label="연락처" value={reg?.phone} />
-          <Row label="결제금액" value={won(reg?.amount)} mono />
-          <Row label="결제상태" value="결제완료 ✅" />
+          {reg?.phone && <Row label="연락처" value={reg.phone} />}
+          {Number(reg?.amount) > 0 ? (
+            <>
+              <Row label="결제금액" value={won(reg?.amount)} mono />
+              <Row label="결제상태" value="결제완료 ✅" />
+            </>
+          ) : (
+            <>
+              <Row label="참가비" value="무료" />
+              <Row label="신청상태" value="신청완료 ✅" />
+            </>
+          )}
         </dl>
       </div>
       {reg?.access_token && (

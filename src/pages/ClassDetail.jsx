@@ -55,7 +55,9 @@ export default function ClassDetail() {
           <Chip>
             👥 {cls.paidCount}/{cls.capacity}명
           </Chip>
-          <Chip className="font-mono font-bold text-white">💳 {won(cls.fee)}</Chip>
+          <Chip className="font-mono font-bold text-white">
+            {Number(cls.fee) === 0 ? '🎁 무료' : `💳 ${won(cls.fee)}`}
+          </Chip>
         </div>
       </header>
 
@@ -67,7 +69,11 @@ export default function ClassDetail() {
 
       <section className="rounded-2xl bg-white p-6 shadow-2xl shadow-black/30 ring-1 ring-white/10">
         <h2 className="mb-1 text-lg font-bold text-slate-900">신청하기</h2>
-        <p className="mb-5 text-xs text-slate-500">아래 정보를 입력하고 결제하면 신청이 완료됩니다.</p>
+        <p className="mb-5 text-xs text-slate-500">
+          {Number(cls.fee) === 0
+            ? '아래 정보를 입력하면 신청이 완료됩니다. (무료)'
+            : '아래 정보를 입력하고 결제하면 신청이 완료됩니다.'}
+        </p>
         <RegistrationForm cls={cls} disabled={closed} />
       </section>
     </article>

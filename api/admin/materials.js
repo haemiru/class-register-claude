@@ -42,8 +42,10 @@ export default async function handler(req, res) {
       // 강의 존재 확인
       const { data: cls } = await supabase.from('cr_classes').select('id').eq('id', classId).single()
       if (!cls) return res.status(404).json({ error: 'CLASS_NOT_FOUND' })
-      const safe = String(fileName).replace(/[^\w.\-가-힣 ]/g, '_').slice(0, 120)
-      const storagePath = `${classId}/${randomUUID()}-${safe}`
+      // 스토리지 키는 ASCII만(한글·공백 키는 Storage가 400 거부). 원본명은 DB file_name 에 보관.
+      const dot = String(fileName).lastIndexOf('.')
+      const ext = dot > 0 ? String(fileName).slice(dot + 1).replace(/[^a-zA-Z0-9]/g, '').slice(0, 10) : ''
+      const storagePath = `${classId}/${randomUUID()}${ext ? `.${ext}` : ''}`
       const { data, error } = await supabase.storage.from(BUCKET).createSignedUploadUrl(storagePath)
       if (error) return res.status(500).json({ error: 'STORAGE_ERROR' })
       return res.status(200).json({ token: data.token, storagePath: data.path })

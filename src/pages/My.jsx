@@ -9,7 +9,6 @@ export default function My() {
   const token = params.get('token') || ''
   const [state, setState] = useState('loading') // loading|done|error
   const [data, setData] = useState(null)
-  const [downloading, setDownloading] = useState('')
 
   useEffect(() => {
     if (!token) {
@@ -31,21 +30,9 @@ export default function My() {
     })()
   }, [token])
 
-  async function download(matId) {
-    setDownloading(matId)
-    try {
-      const res = await fetch(`/api/my?token=${encodeURIComponent(token)}&download=${matId}`)
-      const json = await res.json()
-      if (res.ok && json.url) {
-        window.location.href = json.url
-      } else {
-        alert('다운로드 링크를 받지 못했습니다. 잠시 후 다시 시도해 주세요.')
-      }
-    } catch {
-      alert('다운로드에 실패했습니다.')
-    } finally {
-      setDownloading('')
-    }
+  function download(matId) {
+    // 서버 스트리밍 프록시로 직접 이동 → 원본(한글) 파일명으로 저장
+    window.location.href = `/api/download?token=${encodeURIComponent(token)}&id=${matId}`
   }
 
   if (state === 'loading')
@@ -96,10 +83,9 @@ export default function My() {
                 </div>
                 <button
                   onClick={() => download(m.id)}
-                  disabled={downloading === m.id}
-                  className="btn-gradient shrink-0 rounded-lg px-4 py-2 text-sm disabled:opacity-50"
+                  className="btn-gradient shrink-0 rounded-lg px-4 py-2 text-sm"
                 >
-                  {downloading === m.id ? '여는 중…' : '다운로드'}
+                  다운로드
                 </button>
               </li>
             ))}

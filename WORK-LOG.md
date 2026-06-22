@@ -15,6 +15,9 @@
 - Supabase: 신규 프로젝트(ref `bjouyodzelcoghhxdfsv`), 접두사 `cr_`
 - 신청정보: 이름 + 연락처 + **사전 질문(note, 선택)** / 결제 후: 신청 내역 확인 화면 (이메일·알림톡 없음)
 - 디자인: **바이브 코딩 테마**(다크 + 보라→시안 네온 그라데이션, 글래스 카드, JetBrains Mono)
+- 강의 자료: 비공개 버킷 + **개인 토큰 링크**(`/my?token=`) 접근, 강의당 다중 파일, 다운로드는 스트리밍 프록시(한글 파일명 보존)
+- 무료 강의(fee=0): 토스 0원 결제 불가 → **결제 생략**(`register-free`)하고 바로 확정
+- 정원 마감: status를 자동 변경하지 않고 **paid_count 기반 파생 표시**(목록에서 안 사라짐). 환불은 `payment_status='refunded'` → 자리 자동 복구
 
 ## 3. 구현 완료
 ### Do (2026-06-20)
@@ -54,31 +57,24 @@
 - **정원 마감 = 파생 표시(이미 동작)**: 정원이 차도 status는 'open' 유지 → 목록에서 안 사라지고 ClassCard/ClassDetail 이 `paidCount>=capacity` 로 "마감" 표시 + 신청 차단. status 자동 변경 안 함 → 별도 작업 불필요 확인
 - **신청자 환불 기능**: 신청자 보기에 "환불" 버튼. `POST /api/admin/registrations {registrationId}` → 유료는 토스 결제 취소(cancelPayment), 무료는 건너뜀 → `payment_status='refunded'`(자유 텍스트, DB 변경 없음). 환불 시 paid 카운트 감소 → 마감(파생) 자동 해제로 재신청 가능. 환불자는 자료 접근(my/download의 paid 검사)도 자동 차단
 
-## 4. 다음 할 일 (돌아오면 여기부터)
-1. **⚠️ Supabase 마이그레이션 실행 필요** (자료 기능 — SQL Editor에서 아래 실행):
-   ```sql
-   -- 1) 개인 토큰
-   alter table cr_registrations add column if not exists access_token uuid not null default gen_random_uuid();
-   create unique index if not exists cr_reg_access_token_idx on cr_registrations(access_token);
-   -- 2) 자료 테이블
-   create table if not exists cr_materials (
-     id uuid primary key default gen_random_uuid(),
-     class_id uuid not null references cr_classes(id) on delete cascade,
-     file_name text not null, storage_path text not null, size int,
-     created_at timestamptz not null default now());
-   create index if not exists cr_materials_class_idx on cr_materials(class_id);
-   alter table cr_materials enable row level security;
-   -- 3) 비공개 버킷
-   insert into storage.buckets (id, name, public) values ('cr-materials','cr-materials',false)
-     on conflict (id) do nothing;
-   -- 4) RPC 재생성(access_token 반환 위해) — schema.sql 의 cr_register_paid 전체 블록 다시 실행
-   ```
-   → 실행 후 검증: `select column_name from information_schema.columns where table_name='cr_registrations' and column_name='access_token';`
-2. **결제 흐름 E2E 테스트**: 토스 테스트 키로 신청→결제→완료→**내 자료 다운로드**→관리자 목록 확인
-3. 히어로 문구/서브카피 실제 강의 성격에 맞게 확정 (현재 임시: "코딩, 바이브로 시작하세요")
-4. 실 운영 키 전환 (토스 라이브 키), 도메인 연결 시 Supabase Redirect URLs 추가
+## 4. 마이그레이션 상태 (운영 DB `bjouyodzelcoghhxdfsv`)
+- ✅ `note` 컬럼 + `cr_register_paid(p_note)` (2026-06-22)
+- ✅ `access_token` 컬럼 + 유니크 인덱스 (자료 개인 토큰)
+- ✅ `cr_materials` 테이블 + 인덱스 + RLS
+- ✅ 비공개 버킷 `cr-materials`
+- ✅ `cr_register_paid` 재생성(access_token 반환 포함)
+- ※ 환불 기능은 `payment_status='refunded'`(자유 텍스트) 사용 → 마이그레이션 불필요
+- schema.sql 이 최신 소스. 새 DB는 schema.sql 1회 실행이면 됨
 
-## 5. 주의
+## 5. 다음 할 일 (돌아오면 여기부터)
+1. **E2E 테스트** (Vercel 재배포 후):
+   - 유료: 신청→토스 테스트 결제→완료→"내 자료 다운로드"(한글 파일명 확인)→관리자 목록
+   - 무료(0원): "무료로 신청하기"→완료→자료 다운로드
+   - 정원 마감: 정원만큼 채워 "마감" 표시 확인 → 신청자 보기에서 1명 환불 → 다시 "모집중" 되는지
+2. 히어로 문구/서브카피 실제 강의 성격에 맞게 확정 (현재 임시: "코딩, 바이브로 시작하세요")
+3. 실 운영 키 전환 (토스 라이브 키), 도메인 연결 시 Supabase Redirect URLs 추가
+
+## 6. 주의
 - 서버 키(service_role, TOSS_SECRET_KEY)는 `VITE_` 접두사 금지 (클라이언트 노출됨)
 - 관리자 권한은 `ADMIN_EMAILS`(쉼표 구분)로만 결정. 현재 관리자 = `junominu@gmail.com`
 - 구글 로그인: Supabase Auth Google provider **활성화 토글 ON + Save** 필수 (안 켜면 "provider is not enabled")
@@ -86,7 +82,7 @@
 - 환경변수 변경 후에는 Vercel **Redeploy** 해야 적용됨
 - 이 repo는 독립 git repo (Claude-prj 모노레포와 별개)
 
-## 6. 환경변수 (Vercel, 총 6개)
+## 7. 환경변수 (Vercel, 총 6개)
 | 변수 | 구분 | 값 |
 |---|---|---|
 | `VITE_SUPABASE_URL` | 클라이언트 | Supabase 프로젝트 URL |

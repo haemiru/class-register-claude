@@ -51,6 +51,8 @@
 - **자료 업로드 400 수정**: 스토리지 키에 한글/공백이 들어가 Storage가 거부 → 키를 `{classId}/{UUID}.{ext}` ASCII로 변경, 원본명은 DB file_name 보관(다운로드 시 그 이름)
 - **무료 강의(fee=0) 신청 지원**: 토스는 0원 결제 불가 → `api/register-free.js` 추가(서버에서 fee===0 검증 후 결제 없이 cr_register_paid 로 확정). 폼은 무료면 "무료로 신청하기" → `/success?free=1&token=`. Success/ClassDetail 무료 표기(🎁 무료, 신청완료)
 - **다운로드 한글 파일명 깨짐 수정**: 서명 URL 직접 다운로드 시 Content-Disposition 이 `%EC%9E%90...`처럼 %-인코딩 그대로 노출(Storage가 RFC5987 미사용) → `api/download.js` 스트리밍 프록시 추가. 서버가 파일을 받아 `filename*=UTF-8''<encoded>` 헤더로 다시 내려 원본 한글 파일명 보존. `/my`는 이 엔드포인트로 직접 이동. (스트리밍이라 큰 파일도 응답 제한 회피)
+- **정원 마감 = 파생 표시(이미 동작)**: 정원이 차도 status는 'open' 유지 → 목록에서 안 사라지고 ClassCard/ClassDetail 이 `paidCount>=capacity` 로 "마감" 표시 + 신청 차단. status 자동 변경 안 함 → 별도 작업 불필요 확인
+- **신청자 환불 기능**: 신청자 보기에 "환불" 버튼. `POST /api/admin/registrations {registrationId}` → 유료는 토스 결제 취소(cancelPayment), 무료는 건너뜀 → `payment_status='refunded'`(자유 텍스트, DB 변경 없음). 환불 시 paid 카운트 감소 → 마감(파생) 자동 해제로 재신청 가능. 환불자는 자료 접근(my/download의 paid 검사)도 자동 차단
 
 ## 4. 다음 할 일 (돌아오면 여기부터)
 1. **⚠️ Supabase 마이그레이션 실행 필요** (자료 기능 — SQL Editor에서 아래 실행):

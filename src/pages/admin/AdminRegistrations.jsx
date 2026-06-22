@@ -4,7 +4,7 @@ import { adminApi, getSession, signOut } from '../../lib/adminApi.js'
 import { won, formatDateTime } from '../../lib/format.js'
 
 // Design Ref: §6 — 강의별 신청자 목록 (Plan SC-5)
-const statusLabel = { paid: '결제완료', pending: '대기', failed: '실패' }
+const statusLabel = { paid: '결제완료', pending: '대기', failed: '실패', refunded: '환불됨' }
 
 export default function AdminRegistrations() {
   const { id } = useParams()
@@ -12,6 +12,21 @@ export default function AdminRegistrations() {
   const [data, setData] = useState({ class: null, registrations: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [refunding, setRefunding] = useState('')
+
+  async function load() {
+    try {
+      const res = await adminApi.listRegistrations(id)
+      setData(res)
+    } catch (e) {
+      if (e.status === 401 || e.status === 403) {
+        await signOut()
+        nav('/admin')
+      } else setError('신청자 목록을 불러오지 못했습니다.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     ;(async () => {
@@ -19,19 +34,23 @@ export default function AdminRegistrations() {
         nav('/admin')
         return
       }
-      try {
-        const res = await adminApi.listRegistrations(id)
-        setData(res)
-      } catch (e) {
-        if (e.status === 401 || e.status === 403) {
-          await signOut()
-          nav('/admin')
-        } else setError('신청자 목록을 불러오지 못했습니다.')
-      } finally {
-        setLoading(false)
-      }
+      await load()
     })()
   }, [id])
+
+  async function onRefund(reg) {
+    if (!confirm(`${reg.name} 님을 환불 처리할까요? 결제 건은 토스에서 취소되고, 한 자리가 다시 열립니다.`)) return
+    setError('')
+    setRefunding(reg.id)
+    try {
+      await adminApi.refundRegistration(reg.id)
+      await load()
+    } catch (e) {
+      setError(e.status === 502 ? '토스 결제 취소에 실패했습니다. 잠시 후 다시 시도해 주세요.' : '환불 처리에 실패했습니다.')
+    } finally {
+      setRefunding('')
+    }
+  }
 
   const paid = data.registrations.filter((r) => r.payment_status === 'paid')
 
@@ -49,10 +68,10 @@ export default function AdminRegistrations() {
         </p>
       )}
 
+      {error && <p className="text-sm text-accent">{error}</p>}
+
       {loading ? (
         <p className="text-slate-400">불러오는 중…</p>
-      ) : error ? (
-        <p className="text-accent">{error}</p>
       ) : data.registrations.length === 0 ? (
         <p className="text-slate-400">아직 신청자가 없습니다.</p>
       ) : (
@@ -65,11 +84,12 @@ export default function AdminRegistrations() {
                 <th className="px-4 py-2">결제</th>
                 <th className="px-4 py-2">사전 질문</th>
                 <th className="px-4 py-2">신청시각</th>
+                <th className="px-4 py-2">관리</th>
               </tr>
             </thead>
             <tbody>
               {data.registrations.map((r) => (
-                <tr key={r.id} className="border-t">
+                <tr key={r.id} className={`border-t ${r.payment_status === 'refunded' ? 'opacity-60' : ''}`}>
                   <td className="px-4 py-2 font-medium text-slate-800">{r.name}</td>
                   <td className="px-4 py-2 text-slate-600">{r.phone}</td>
                   <td className="px-4 py-2">
@@ -77,7 +97,9 @@ export default function AdminRegistrations() {
                       className={`rounded-full px-2 py-0.5 text-xs ${
                         r.payment_status === 'paid'
                           ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-slate-200 text-slate-600'
+                          : r.payment_status === 'refunded'
+                            ? 'bg-rose-100 text-rose-700'
+                            : 'bg-slate-200 text-slate-600'
                       }`}
                     >
                       {statusLabel[r.payment_status] || r.payment_status}
@@ -87,6 +109,19 @@ export default function AdminRegistrations() {
                     {r.note || <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-4 py-2 text-slate-500">{formatDateTime(r.created_at)}</td>
+                  <td className="px-4 py-2">
+                    {r.payment_status === 'paid' ? (
+                      <button
+                        onClick={() => onRefund(r)}
+                        disabled={refunding === r.id}
+                        className="rounded-md border border-rose-200 px-2.5 py-1 text-xs text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                      >
+                        {refunding === r.id ? '처리 중…' : '환불'}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-slate-300">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

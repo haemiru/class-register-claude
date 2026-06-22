@@ -50,6 +50,7 @@ export const adminApi = {
   createClass: (data) => req('/classes', { method: 'POST', body: data }),
   updateClass: (id, data) => req(`/classes/${id}`, { method: 'PATCH', body: data }),
   listRegistrations: (classId) => req(`/registrations?classId=${classId}`),
+  refundRegistration: (registrationId) => req('/registrations', { method: 'POST', body: { registrationId } }),
   // 강의 자료
   listMaterials: (classId) => req(`/materials?classId=${classId}`),
   signMaterialUpload: (classId, fileName) =>

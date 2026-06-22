@@ -11,6 +11,7 @@ export default function AdminClasses() {
   const nav = useNavigate()
   const [classes, setClasses] = useState([])
   const [form, setForm] = useState(empty)
+  const [files, setFiles] = useState([]) // 등록 시 함께 올릴 자료(생성 후 업로드)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -48,15 +49,28 @@ export default function AdminClasses() {
     }
     setSaving(true)
     try {
-      await adminApi.createClass({
+      // 1) 강의 생성 → 2) 선택한 자료를 그 강의로 업로드
+      const { class: created } = await adminApi.createClass({
         ...form,
         capacity: Number(form.capacity),
         fee: Number(form.fee),
         // datetime-local → ISO
         starts_at: new Date(form.starts_at).toISOString(),
       })
+      let uploadFailed = false
+      for (const f of files) {
+        try {
+          await uploadMaterial(created.id, f)
+        } catch {
+          uploadFailed = true
+        }
+      }
       setForm(empty)
+      setFiles([])
       await load()
+      if (uploadFailed) {
+        setError('강의는 등록됐지만 일부 자료 업로드에 실패했습니다. 아래 강의 카드에서 다시 추가해 주세요.')
+      }
     } catch {
       setError('강의 등록에 실패했습니다.')
     } finally {
@@ -65,6 +79,13 @@ export default function AdminClasses() {
   }
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  function onPickFiles(e) {
+    const picked = Array.from(e.target.files || [])
+    e.target.value = '' // 같은 파일 재선택 허용
+    if (picked.length) setFiles((prev) => [...prev, ...picked])
+  }
+  const removeFile = (idx) => setFiles((prev) => prev.filter((_, i) => i !== idx))
 
   return (
     <div className="space-y-8">
@@ -103,6 +124,31 @@ export default function AdminClasses() {
         </div>
         <Field label="설명">
           <textarea rows="3" className={inputCls} value={form.description} onChange={set('description')} />
+        </Field>
+        <Field label="강의 자료 (선택)" hint="결제 완료자만 다운로드할 수 있습니다. 여러 개 가능.">
+          <label className="inline-block cursor-pointer text-sm text-brand underline">
+            + 파일 선택
+            <input type="file" multiple className="hidden" onChange={onPickFiles} />
+          </label>
+          {files.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {files.map((f, i) => (
+                <li key={i} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="min-w-0 truncate text-slate-700">
+                    {f.name}
+                    <span className="ml-2 text-xs text-slate-400">{formatBytes(f.size)}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(i)}
+                    className="shrink-0 text-xs text-accent underline"
+                  >
+                    제거
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </Field>
         {error && <p className="text-sm text-accent">{error}</p>}
         <button

@@ -47,6 +47,7 @@
   - 신규: `cr_materials` 테이블, `api/admin/materials.js`, `api/my.js`, `src/pages/My.jsx`, AdminClasses 자료 관리 UI
   - ✅ `npm run build` 통과
 - **강의 수정 기능 추가**: 관리자 강의 카드에 "수정" → 인라인 폼(제목·일시·장소·정원·참가비·설명)으로 편집·저장. PATCH 엔드포인트는 기존 것 재사용(프론트만 추가, DB 변경 없음). `toDatetimeLocal` 헬퍼로 ISO→datetime-local 역변환
+- **강의 등록 시 자료 첨부**: 새 강의 등록 폼에서 파일 선택(여러 개) → 제출 시 `강의 생성 → 생성된 ID로 자료 업로드` 순차 처리. 일부 업로드 실패해도 강의는 등록되고 카드에서 재추가 안내. (자료는 class_id 필요 → 생성 후 업로드)
 
 ## 4. 다음 할 일 (돌아오면 여기부터)
 1. **⚠️ Supabase 마이그레이션 실행 필요** (자료 기능 — SQL Editor에서 아래 실행):

@@ -46,6 +46,7 @@
   - 다운로드: `/api/my` 가 토큰→paid 신청 검증 후 60초 서명 URL 발급(원본 파일명 download)
   - 신규: `cr_materials` 테이블, `api/admin/materials.js`, `api/my.js`, `src/pages/My.jsx`, AdminClasses 자료 관리 UI
   - ✅ `npm run build` 통과
+- **강의 수정 기능 추가**: 관리자 강의 카드에 "수정" → 인라인 폼(제목·일시·장소·정원·참가비·설명)으로 편집·저장. PATCH 엔드포인트는 기존 것 재사용(프론트만 추가, DB 변경 없음). `toDatetimeLocal` 헬퍼로 ISO→datetime-local 역변환
 
 ## 4. 다음 할 일 (돌아오면 여기부터)
 1. **⚠️ Supabase 마이그레이션 실행 필요** (자료 기능 — SQL Editor에서 아래 실행):

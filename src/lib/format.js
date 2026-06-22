@@ -31,6 +31,14 @@ export function formatPhone(value) {
   return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7, 11)}`
 }
 
+// ISO 시각 → <input type="datetime-local"> 값(YYYY-MM-DDTHH:mm, 로컬시간)
+export function toDatetimeLocal(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 16)
+}
+
 // 파일 크기 사람이 읽기 쉬운 형식 (B/KB/MB)
 export function formatBytes(n) {
   const b = Number(n || 0)

@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   }
 
   const { data, error } = await supabase
-    .from('cr_classes')
+    .from('classregi_classes')
     .update(patch)
     .eq('id', id)
     .select()

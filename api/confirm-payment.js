@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   try {
     // 0) pending 행 로드 (pre-register 에서 신청 내용을 미리 저장해 둠)
     const { data: existing } = await supabase
-      .from('cr_registrations')
+      .from('classregi_registrations')
       .select('*')
       .eq('toss_order_id', orderId)
       .maybeSingle()
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
     await confirmPayment({ paymentKey, orderId, amount: Number(amount) })
 
     // 3) 정원 확인 + pending → paid 승격 (트랜잭션 RPC — 동시성 안전)
-    const { data: reg, error: rpcErr } = await supabase.rpc('cr_confirm_paid', {
+    const { data: reg, error: rpcErr } = await supabase.rpc('classregi_confirm_paid', {
       p_order_id: orderId,
       p_payment_key: paymentKey,
       p_amount: Number(amount),

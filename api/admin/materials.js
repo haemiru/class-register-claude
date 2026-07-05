@@ -5,9 +5,9 @@ import { requireAdmin } from '../_lib/auth.js'
 // Design Ref: §4, §5 — 강의 자료 관리(관리자 전용)
 //   GET    ?classId=        : 강의별 자료 목록
 //   POST   {action:'sign'}  : 서명된 업로드 URL 발급(서버리스 4.5MB 제한 회피)
-//   POST   {action:'confirm'}: 업로드 완료된 파일을 cr_materials 에 기록
+//   POST   {action:'confirm'}: 업로드 완료된 파일을 classregi_materials 에 기록
 //   DELETE ?id=             : 자료 삭제(스토리지 객체 + 행)
-const BUCKET = 'cr-materials'
+const BUCKET = 'classregi-materials'
 
 export default async function handler(req, res) {
   if (!(await requireAdmin(req, res))) return
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     const { classId } = req.query
     if (!classId) return res.status(400).json({ error: 'MISSING_CLASS_ID' })
     const { data, error } = await supabase
-      .from('cr_materials')
+      .from('classregi_materials')
       .select('id, file_name, size, created_at')
       .eq('class_id', classId)
       .order('created_at', { ascending: true })
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       const { classId, fileName } = req.body || {}
       if (!classId || !fileName) return res.status(400).json({ error: 'INVALID_INPUT' })
       // 강의 존재 확인
-      const { data: cls } = await supabase.from('cr_classes').select('id').eq('id', classId).single()
+      const { data: cls } = await supabase.from('classregi_classes').select('id').eq('id', classId).single()
       if (!cls) return res.status(404).json({ error: 'CLASS_NOT_FOUND' })
       // 스토리지 키는 ASCII만(한글·공백 키는 Storage가 400 거부). 원본명은 DB file_name 에 보관.
       const dot = String(fileName).lastIndexOf('.')
@@ -59,7 +59,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'BAD_PATH' })
       }
       const { data, error } = await supabase
-        .from('cr_materials')
+        .from('classregi_materials')
         .insert({
           class_id: classId,
           file_name: String(fileName).slice(0, 200),
@@ -80,13 +80,13 @@ export default async function handler(req, res) {
     const { id } = req.query
     if (!id) return res.status(400).json({ error: 'MISSING_ID' })
     const { data: mat } = await supabase
-      .from('cr_materials')
+      .from('classregi_materials')
       .select('id, storage_path')
       .eq('id', id)
       .single()
     if (!mat) return res.status(404).json({ error: 'NOT_FOUND' })
     await supabase.storage.from(BUCKET).remove([mat.storage_path])
-    const { error } = await supabase.from('cr_materials').delete().eq('id', id)
+    const { error } = await supabase.from('classregi_materials').delete().eq('id', id)
     if (error) return res.status(500).json({ error: 'DB_ERROR' })
     return res.status(200).json({ ok: true })
   }

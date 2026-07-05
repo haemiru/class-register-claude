@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     const { data, error } = await supabase
-      .from('cr_classes')
+      .from('classregi_classes')
       .select('*')
       .order('starts_at', { ascending: true })
     if (error) return res.status(500).json({ error: 'DB_ERROR' })
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'INVALID_INPUT' })
     }
     const { data, error } = await supabase
-      .from('cr_classes')
+      .from('classregi_classes')
       .insert({
         title,
         description: description || null,

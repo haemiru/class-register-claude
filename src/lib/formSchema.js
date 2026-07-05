@@ -1,6 +1,6 @@
 // 브레인센트 베이비 수면·호흡 클래스 신청 문진 정의.
 // 신청 폼(RegistrationForm)과 관리자 상세 조회(AdminRegistrations)가 이 정의를 공유한다.
-// 여기 담기는 값은 cr_registrations.form_data(jsonb)에 그대로 저장된다.
+// 여기 담기는 값은 classregi_registrations.form_data(jsonb)에 그대로 저장된다.
 // (보호자 성함·연락처·이메일은 별도 컬럼 name/phone/email 로 저장 → 여기 미포함)
 
 export const CONCERN_OPTIONS = [

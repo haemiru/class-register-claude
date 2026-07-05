@@ -22,9 +22,9 @@ export default async function handler(req, res) {
     if (!classId) return res.status(400).json({ error: 'MISSING_CLASS_ID' })
 
     const [{ data: cls }, { data: registrations, error }] = await Promise.all([
-      supabase.from('cr_classes').select('id, title, starts_at, capacity, fee').eq('id', classId).single(),
+      supabase.from('classregi_classes').select('id, title, starts_at, capacity, fee').eq('id', classId).single(),
       supabase
-        .from('cr_registrations')
+        .from('classregi_registrations')
         .select('id, name, phone, email, note, form_data, payment_status, amount, created_at')
         .eq('class_id', classId)
         .order('created_at', { ascending: true }),
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
     if (!registrationId) return res.status(400).json({ error: 'MISSING_ID' })
 
     const { data: reg } = await supabase
-      .from('cr_registrations')
+      .from('classregi_registrations')
       .select('id, payment_status, toss_payment_key, amount')
       .eq('id', registrationId)
       .maybeSingle()
@@ -54,7 +54,7 @@ export default async function handler(req, res) {
     }
 
     const { data: updated, error } = await supabase
-      .from('cr_registrations')
+      .from('classregi_registrations')
       .update({ payment_status: 'refunded' })
       .eq('id', registrationId)
       .select('id, name, phone, note, payment_status, amount, created_at')

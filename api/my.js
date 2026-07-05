@@ -2,7 +2,7 @@ import { getAdminClient } from './_lib/supabaseAdmin.js'
 
 // Design Ref: §7 — 결제 완료자 전용 자료 목록 조회(개인 토큰 게이트)
 //   GET ?token= : 내 강의 + 자료 목록  (실제 다운로드는 api/download.js)
-// 토큰은 cr_registrations.access_token(UUID). payment_status='paid' 인 건만 허용.
+// 토큰은 classregi_registrations.access_token(UUID). payment_status='paid' 인 건만 허용.
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'METHOD_NOT_ALLOWED' })
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   // 토큰 → 결제 완료 신청 확인
   const { data: reg } = await supabase
-    .from('cr_registrations')
+    .from('classregi_registrations')
     .select('id, name, class_id, payment_status')
     .eq('access_token', token)
     .maybeSingle()
@@ -29,9 +29,9 @@ export default async function handler(req, res) {
 
   // ── 목록: 강의 정보 + 자료 ────────────────────────────
   const [{ data: cls }, { data: materials }] = await Promise.all([
-    supabase.from('cr_classes').select('title, starts_at, location').eq('id', reg.class_id).single(),
+    supabase.from('classregi_classes').select('title, starts_at, location').eq('id', reg.class_id).single(),
     supabase
-      .from('cr_materials')
+      .from('classregi_materials')
       .select('id, file_name, size, created_at')
       .eq('class_id', reg.class_id)
       .order('created_at', { ascending: true }),

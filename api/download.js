@@ -4,7 +4,7 @@ import { getAdminClient } from './_lib/supabaseAdmin.js'
 // Design Ref: §7 — 결제 완료자 전용 자료 다운로드(스트리밍 프록시)
 // 서명 URL 직접 다운로드는 한글 파일명이 Content-Disposition 에서 깨짐(서버가 %-인코딩 그대로 넣음).
 // → 서버에서 받아 RFC 5987(filename*=UTF-8'') 헤더로 다시 내려 원본 한글 파일명 보존.
-const BUCKET = 'cr-materials'
+const BUCKET = 'classregi-materials'
 export const config = { maxDuration: 30 }
 
 export default async function handler(req, res) {
@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
   // 토큰 → 결제 완료 신청 확인
   const { data: reg } = await supabase
-    .from('cr_registrations')
+    .from('classregi_registrations')
     .select('class_id, payment_status')
     .eq('access_token', token)
     .maybeSingle()
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
   // 자료 확인 + 해당 강의 소속 검증
   const { data: mat } = await supabase
-    .from('cr_materials')
+    .from('classregi_materials')
     .select('file_name, storage_path, class_id')
     .eq('id', id)
     .maybeSingle()

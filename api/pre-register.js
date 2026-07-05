@@ -3,7 +3,7 @@ import { getAdminClient } from './_lib/supabaseAdmin.js'
 
 // Design Ref: §7 — 유료 결제 전, 신청 내용을 pending 행으로 선저장.
 // 민감한 문진(form_data)을 URL에 싣지 않기 위해 결제 이전에 서버로 직접 저장하고,
-// 결제 승인(/api/confirm-payment) 시 이 행을 paid 로 승격(cr_confirm_paid)한다.
+// 결제 승인(/api/confirm-payment) 시 이 행을 paid 로 승격(classregi_confirm_paid)한다.
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'METHOD_NOT_ALLOWED' })
 
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   // 클래스 확인 (유료·오픈만) — 클라이언트 금액 신뢰 금지
   const { data: cls, error: clsErr } = await supabase
-    .from('cr_classes')
+    .from('classregi_classes')
     .select('id, fee, status, capacity')
     .eq('id', classId)
     .single()
@@ -29,14 +29,14 @@ export default async function handler(req, res) {
 
   // 사전 정원 확인(UX) — 이미 마감이면 결제 진입 차단. 최종 원자 검증은 confirm 단계.
   const { count: paidCount } = await supabase
-    .from('cr_registrations')
+    .from('classregi_registrations')
     .select('id', { count: 'exact', head: true })
     .eq('class_id', classId)
     .eq('payment_status', 'paid')
   if (paidCount != null && paidCount >= cls.capacity) return res.status(409).json({ error: 'FULL' })
 
   const orderId = `cr_${Date.now()}_${randomUUID().slice(0, 8)}`
-  const { error: insErr } = await supabase.from('cr_registrations').insert({
+  const { error: insErr } = await supabase.from('classregi_registrations').insert({
     class_id: classId,
     name: String(name).slice(0, 100),
     phone: String(phone).slice(0, 30),

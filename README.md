@@ -39,9 +39,9 @@ npm run dev               # 프론트만 (localhost:5173)
 
 1. 새 Supabase 프로젝트 생성
 2. SQL Editor에서 `supabase/schema.sql` 전체 실행
-   - `cr_classes`, `cr_registrations` 테이블 + RLS
-   - 공개 조회 RPC(`cr_open_classes`, `cr_class_detail`) — 집계만 노출
-   - 정원 정합성 RPC(`cr_register_paid`) — 트랜잭션 내 정원 확인 후 insert
+   - `classregi_classes`, `classregi_registrations` 테이블 + RLS
+   - 공개 조회 RPC(`classregi_open_classes`, `classregi_class_detail`) — 집계만 노출
+   - 정원 정합성 RPC(`classregi_register_paid`) — 트랜잭션 내 정원 확인 후 insert
 3. Project Settings → API 에서 URL / anon / service_role 키 확보
 
 ## 토스페이먼츠
@@ -78,4 +78,4 @@ npm run dev               # 프론트만 (localhost:5173)
 
 - 금액은 서버에서 클래스 `fee`와 대조 (클라이언트 amount 신뢰 안 함)
 - `toss_order_id` unique 로 중복 승인 멱등 차단
-- 정원 확인+insert 는 `cr_register_paid` 트랜잭션 RPC로 동시성 안전
+- 정원 확인+insert 는 `classregi_register_paid` 트랜잭션 RPC로 동시성 안전

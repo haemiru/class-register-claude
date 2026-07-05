@@ -13,7 +13,7 @@ export default function ClassDetail() {
 
   useEffect(() => {
     ;(async () => {
-      const { data, error } = await supabase.rpc('cr_class_detail', { p_id: id })
+      const { data, error } = await supabase.rpc('classregi_class_detail', { p_id: id })
       if (error || !data || data.length === 0) setError('클래스를 찾을 수 없습니다.')
       else setCls({ ...data[0], paidCount: Number(data[0].paid_count) })
       setLoading(false)

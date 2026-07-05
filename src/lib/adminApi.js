@@ -59,7 +59,7 @@ export const adminApi = {
   deleteMaterial: (id) => req(`/materials?id=${id}`, { method: 'DELETE' }),
 }
 
-const MATERIAL_BUCKET = 'cr-materials'
+const MATERIAL_BUCKET = 'classregi-materials'
 
 // 자료 업로드: sign → Storage 직접 업로드(서명 URL) → confirm
 export async function uploadMaterial(classId, file) {

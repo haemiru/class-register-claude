@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import ClassCard from '../components/ClassCard.jsx'
 
-// Design Ref: §6 — 공개 클래스 목록 (cr_open_classes RPC, 집계 포함)
+// Design Ref: §6 — 공개 클래스 목록 (classregi_open_classes RPC, 집계 포함)
 export default function ClassList() {
   const [classes, setClasses] = useState([])
   const [loading, setLoading] = useState(true)
@@ -10,7 +10,7 @@ export default function ClassList() {
 
   useEffect(() => {
     ;(async () => {
-      const { data, error } = await supabase.rpc('cr_open_classes')
+      const { data, error } = await supabase.rpc('classregi_open_classes')
       if (error) setError('클래스 목록을 불러오지 못했습니다.')
       else setClasses((data || []).map((c) => ({ ...c, paidCount: Number(c.paid_count) })))
       setLoading(false)

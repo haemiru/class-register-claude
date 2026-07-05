@@ -6,8 +6,8 @@ import { getAdminClient } from './_lib/supabaseAdmin.js'
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'METHOD_NOT_ALLOWED' })
 
-  const { classId, name, phone, note } = req.body || {}
-  if (!classId || !name || !phone) return res.status(400).json({ error: 'INVALID_INPUT' })
+  const { classId, name, phone, email, note, form_data } = req.body || {}
+  if (!classId || !name || !phone || !email) return res.status(400).json({ error: 'INVALID_INPUT' })
 
   let supabase
   try {
@@ -35,6 +35,8 @@ export default async function handler(req, res) {
     p_order_id: `free_${randomUUID()}`,
     p_amount: 0,
     p_note: note ? String(note).slice(0, 500) : null,
+    p_email: email ? String(email).slice(0, 200) : null,
+    p_form_data: form_data && typeof form_data === 'object' ? form_data : {},
   })
 
   if (rpcErr) {

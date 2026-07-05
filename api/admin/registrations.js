@@ -25,7 +25,7 @@ export default async function handler(req, res) {
       supabase.from('cr_classes').select('id, title, starts_at, capacity, fee').eq('id', classId).single(),
       supabase
         .from('cr_registrations')
-        .select('id, name, phone, note, payment_status, amount, created_at')
+        .select('id, name, phone, email, note, form_data, payment_status, amount, created_at')
         .eq('class_id', classId)
         .order('created_at', { ascending: true }),
     ])

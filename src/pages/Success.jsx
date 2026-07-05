@@ -34,14 +34,11 @@ export default function Success() {
         }
         return
       }
+      // 신청 내용은 결제 전 pre-register 로 서버에 저장됨 → 승인엔 결제 식별자만 전달
       const body = {
         paymentKey: params.get('paymentKey'),
         orderId: params.get('orderId'),
         amount: Number(params.get('amount')),
-        classId: params.get('classId'),
-        name: params.get('name'),
-        phone: params.get('phone'),
-        note: params.get('note') || '',
       }
       try {
         const res = await fetch('/api/confirm-payment', {

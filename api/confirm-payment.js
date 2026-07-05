@@ -6,8 +6,8 @@ import { confirmPayment, cancelPayment } from './_lib/toss.js'
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'METHOD_NOT_ALLOWED' })
 
-  const { paymentKey, orderId, amount, classId, name, phone, note } = req.body || {}
-  if (!paymentKey || !orderId || !amount || !classId || !name || !phone) {
+  const { paymentKey, orderId, amount } = req.body || {}
+  if (!paymentKey || !orderId || !amount) {
     return res.status(400).json({ error: 'INVALID_INPUT' })
   }
 
@@ -19,40 +19,31 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 0) 멱등성: 이미 확정된 주문이면 그대로 반환 (StrictMode/재시도 대비)
+    // 0) pending 행 로드 (pre-register 에서 신청 내용을 미리 저장해 둠)
     const { data: existing } = await supabase
       .from('cr_registrations')
       .select('*')
       .eq('toss_order_id', orderId)
       .maybeSingle()
-    if (existing && existing.payment_status === 'paid') {
+    if (!existing) return res.status(404).json({ error: 'ORDER_NOT_FOUND' })
+    // 멱등성: 이미 확정된 주문이면 그대로 반환 (StrictMode/재시도 대비)
+    if (existing.payment_status === 'paid') {
       return res.status(200).json({ registration: existing })
     }
 
-    // 1) 강의 로드 + 금액 검증 (클라이언트 amount 신뢰 금지)
-    const { data: cls, error: clsErr } = await supabase
-      .from('cr_classes')
-      .select('id, fee, capacity, status')
-      .eq('id', classId)
-      .single()
-    if (clsErr || !cls) return res.status(404).json({ error: 'CLASS_NOT_FOUND' })
-    if (Number(amount) !== Number(cls.fee)) {
+    // 1) 금액 검증 (클라이언트/토스 amount 를 선저장된 pending 금액과 대조)
+    if (Number(amount) !== Number(existing.amount)) {
       return res.status(400).json({ error: 'AMOUNT_MISMATCH' })
     }
-    if (cls.status !== 'open') return res.status(409).json({ error: 'CLOSED' })
 
     // 2) 토스 결제 승인 (서버 secretKey)
     await confirmPayment({ paymentKey, orderId, amount: Number(amount) })
 
-    // 3) 정원 확인 + 신청 확정 (트랜잭션 RPC — 동시성 안전)
-    const { data: reg, error: rpcErr } = await supabase.rpc('cr_register_paid', {
-      p_class_id: classId,
-      p_name: name,
-      p_phone: phone,
-      p_payment_key: paymentKey,
+    // 3) 정원 확인 + pending → paid 승격 (트랜잭션 RPC — 동시성 안전)
+    const { data: reg, error: rpcErr } = await supabase.rpc('cr_confirm_paid', {
       p_order_id: orderId,
+      p_payment_key: paymentKey,
       p_amount: Number(amount),
-      p_note: note ? String(note).slice(0, 500) : null,
     })
 
     if (rpcErr) {

@@ -20,8 +20,10 @@ create table if not exists cr_registrations (
   class_id         uuid not null references cr_classes(id) on delete cascade,
   name             text not null,
   phone            text not null,
-  note             text,                              -- 신청자 사전 질문(선택)
-  payment_status   text not null default 'pending',  -- 'pending'|'paid'|'failed'
+  email            text,                              -- 자료 발송용
+  note             text,                              -- 신청자 사전 질문(선택, 레거시)
+  form_data        jsonb not null default '{}'::jsonb, -- 상세 문진 답변(아기 정보·수면/호흡·동의 등)
+  payment_status   text not null default 'pending',  -- 'pending'|'paid'|'failed'|'refunded'
   toss_payment_key text,
   toss_order_id    text unique,            -- 멱등성: 동일 주문 중복 승인 차단
   amount           int,
@@ -115,6 +117,7 @@ grant execute on function cr_class_detail(uuid) to anon, authenticated;
 -- Design Ref: §4, §10 — 1차는 서버 count 확인, 부하 시 이 함수로 승격.
 -- 트랜잭션 내에서 paid 카운트 확인 후 insert (동시성 안전).
 drop function if exists cr_register_paid(uuid, text, text, text, text, int);
+drop function if exists cr_register_paid(uuid, text, text, text, text, int, text);
 create or replace function cr_register_paid(
   p_class_id uuid,
   p_name text,
@@ -122,7 +125,9 @@ create or replace function cr_register_paid(
   p_payment_key text,
   p_order_id text,
   p_amount int,
-  p_note text default null
+  p_note text default null,
+  p_email text default null,
+  p_form_data jsonb default '{}'::jsonb
 ) returns cr_registrations
 language plpgsql
 as $$
@@ -145,11 +150,62 @@ begin
   end if;
 
   insert into cr_registrations
-    (class_id, name, phone, note, payment_status, toss_payment_key, toss_order_id, amount)
+    (class_id, name, phone, email, note, form_data, payment_status, toss_payment_key, toss_order_id, amount)
   values
-    (p_class_id, p_name, p_phone, p_note, 'paid', p_payment_key, p_order_id, p_amount)
+    (p_class_id, p_name, p_phone, p_email, p_note, coalesce(p_form_data, '{}'::jsonb),
+     'paid', p_payment_key, p_order_id, p_amount)
   returning * into v_row;
 
   return v_row;
 end;
 $$;
+
+-- ── 유료 결제 승격: pending 행을 paid 로 (정원 원자 확인) ──
+-- Design Ref: §7 — pre-register 로 만든 pending 행을 결제 승인 후 확정.
+-- 신청 데이터는 이미 pending 행에 있으므로 여기선 상태/결제키/금액만 갱신.
+create or replace function cr_confirm_paid(
+  p_order_id text,
+  p_payment_key text,
+  p_amount int
+) returns cr_registrations
+language plpgsql
+as $$
+declare
+  v_class_id uuid;
+  v_capacity int;
+  v_paid     int;
+  v_row      cr_registrations;
+begin
+  -- 대상 pending 행 확보(+ 클래스 락으로 동시성 보호)
+  select class_id into v_class_id
+    from cr_registrations
+   where toss_order_id = p_order_id
+   for update;
+  if v_class_id is null then
+    raise exception 'ORDER_NOT_FOUND';
+  end if;
+
+  select capacity into v_capacity from cr_classes where id = v_class_id for update;
+  if v_capacity is null then
+    raise exception 'CLASS_NOT_FOUND';
+  end if;
+
+  select count(*) into v_paid
+    from cr_registrations
+   where class_id = v_class_id and payment_status = 'paid';
+
+  if v_paid >= v_capacity then
+    raise exception 'FULL';
+  end if;
+
+  update cr_registrations
+     set payment_status   = 'paid',
+         toss_payment_key = p_payment_key,
+         amount           = p_amount
+   where toss_order_id = p_order_id
+  returning * into v_row;
+
+  return v_row;
+end;
+$$;
+grant execute on function cr_confirm_paid(text, text, int) to anon, authenticated;

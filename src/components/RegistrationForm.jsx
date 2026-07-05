@@ -3,32 +3,53 @@ import { useNavigate } from 'react-router-dom'
 import Field, { inputCls } from './Field.jsx'
 import { requestCardPayment } from '../lib/toss.js'
 import { won, formatPhone } from '../lib/format.js'
+import { FORM_SECTIONS, emptyFormData, PRIVACY_NOTICE } from '../lib/formSchema.js'
 
-// Design Ref: §6, §7 — 신청서(이름·연락처) → 토스 결제위젯 호출(유료) / 무료는 결제 생략
+// Design Ref: §6, §7 — 상세 신청서(보호자·아기·수면/호흡 문진·동의) → 유료: pre-register 후 결제 / 무료: 즉시 확정
 export default function RegistrationForm({ cls, disabled }) {
   const nav = useNavigate()
   const isFree = Number(cls.fee) === 0
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
-  const [note, setNote] = useState('')
+  const [email, setEmail] = useState('')
+  const [data, setData] = useState(emptyFormData)
+  const [consent, setConsent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  const setField = (key, value) => setData((d) => ({ ...d, [key]: value }))
+  const toggleCheck = (key, option) =>
+    setData((d) => {
+      const cur = d[key] || []
+      return { ...d, [key]: cur.includes(option) ? cur.filter((o) => o !== option) : [...cur, option] }
+    })
+
+  function validate() {
+    if (!name.trim() || !phone.trim() || !email.trim()) return '보호자 성함·연락처·이메일을 입력해 주세요.'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return '이메일 형식을 확인해 주세요.'
+    if (!data.babyBirth) return '아기 생년월일을 입력해 주세요.'
+    if (!consent) return '개인정보 수집·이용에 동의해 주셔야 신청할 수 있습니다.'
+    return ''
+  }
+
   async function onSubmit(e) {
     e.preventDefault()
-    setError('')
-    if (!name.trim() || !phone.trim()) {
-      setError('이름과 연락처를 입력해 주세요.')
+    const msg = validate()
+    if (msg) {
+      setError(msg)
       return
     }
+    setError('')
     setSubmitting(true)
+    const form_data = { ...data, privacyConsent: true }
+    const base = { classId: cls.id, name: name.trim(), phone: phone.trim(), email: email.trim(), form_data }
     try {
       if (isFree) {
-        // 무료 클래스: 토스는 0원 결제 불가 → 결제 생략하고 바로 신청 확정
+        // 무료: 결제 없이 바로 신청 확정
         const res = await fetch('/api/register-free', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ classId: cls.id, name: name.trim(), phone: phone.trim(), note: note.trim() }),
+          body: JSON.stringify(base),
         })
         const json = await res.json()
         if (!res.ok) {
@@ -39,10 +60,26 @@ export default function RegistrationForm({ cls, disabled }) {
         nav(`/success?free=1&token=${json.registration.access_token}`)
         return
       }
-      // Plan SC-2: 유료 신청 → 결제 흐름 진입
-      await requestCardPayment({ cls, name: name.trim(), phone: phone.trim(), note: note.trim() })
+      // 유료: 신청 내용을 먼저 저장(pending) → 결제창 진입
+      const res = await fetch('/api/pre-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(base),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setError(
+          json.error === 'FULL'
+            ? '아쉽게도 정원이 마감되었습니다.'
+            : json.error === 'CLOSED'
+              ? '모집이 마감된 클래스입니다.'
+              : '신청 준비에 실패했습니다.',
+        )
+        setSubmitting(false)
+        return
+      }
+      await requestCardPayment({ cls, orderId: json.orderId, name: name.trim() })
     } catch (err) {
-      // 사용자가 결제창을 닫은 경우 등
       setError(err?.message || (isFree ? '신청을 시작하지 못했습니다.' : '결제를 시작하지 못했습니다.'))
       setSubmitting(false)
     }
@@ -57,41 +94,65 @@ export default function RegistrationForm({ cls, disabled }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <Field label="이름" required>
-        <input
-          className={inputCls}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="홍길동"
-        />
-      </Field>
-      <Field label="연락처" required hint="안내·환불 연락에 사용됩니다.">
-        <input
-          className={inputCls}
-          value={phone}
-          onChange={(e) => setPhone(formatPhone(e.target.value))}
-          placeholder="010-1234-5678"
-          inputMode="numeric"
-          maxLength={13}
-        />
-      </Field>
-      <Field label="이번에 꼭 알고 싶은 한가지" hint="미리 알려주시면 클래스에 반영해 드려요. (선택)">
-        <textarea
-          className={inputCls}
-          rows={3}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="예: ○○가 가장 궁금해요"
-          maxLength={500}
-        />
-      </Field>
+    <form onSubmit={onSubmit} className="space-y-6">
+      {/* 보호자 정보 */}
+      <SectionTitle>보호자 정보</SectionTitle>
+      <div className="space-y-4">
+        <Field label="보호자 성함" required>
+          <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="홍길동" />
+        </Field>
+        <Field label="연락처" required hint="안내·환불 연락에 사용됩니다.">
+          <input
+            className={inputCls}
+            value={phone}
+            onChange={(e) => setPhone(formatPhone(e.target.value))}
+            placeholder="010-1234-5678"
+            inputMode="numeric"
+            maxLength={13}
+          />
+        </Field>
+        <Field label="이메일" required hint="자료 발송용">
+          <input
+            type="email"
+            className={inputCls}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="parent@example.com"
+          />
+        </Field>
+      </div>
+
+      {/* 문진 섹션 */}
+      {FORM_SECTIONS.map((section) => (
+        <div key={section.title} className="space-y-4">
+          <SectionTitle>{section.title}</SectionTitle>
+          {section.fields.map((f) => (
+            <FieldControl key={f.key} field={f} value={data[f.key]} setField={setField} toggleCheck={toggleCheck} />
+          ))}
+        </div>
+      ))}
+
+      {/* 개인정보 동의 */}
+      <div className="space-y-3">
+        <SectionTitle>개인정보 수집·이용 동의</SectionTitle>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-500">
+          <p>· 수집 항목: {PRIVACY_NOTICE.items}</p>
+          <p>· 수집 목적: {PRIVACY_NOTICE.purpose}</p>
+          <p>· 보관 기간: {PRIVACY_NOTICE.retention}</p>
+        </div>
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
+            className="h-4 w-4 accent-sage"
+          />
+          개인정보 수집·이용에 동의합니다. <span className="text-rose-500">*</span>
+        </label>
+      </div>
+
       {error && <p className="text-sm text-rose-600">{error}</p>}
-      <button
-        type="submit"
-        disabled={submitting}
-        className="btn-gradient w-full rounded-xl py-3.5"
-      >
+      <button type="submit" disabled={submitting} className="btn-gradient w-full rounded-xl py-3.5">
         {submitting
           ? isFree
             ? '신청하는 중…'
@@ -101,5 +162,92 @@ export default function RegistrationForm({ cls, disabled }) {
             : `${won(cls.fee)} 결제하고 신청`}
       </button>
     </form>
+  )
+}
+
+function SectionTitle({ children }) {
+  return (
+    <h3 className="flex items-center gap-2 border-b border-slate-200 pb-2 text-sm font-bold text-slate-700">
+      <span className="h-4 w-1.5 rounded-full bg-sage" /> {children}
+    </h3>
+  )
+}
+
+// 필드 타입별 컨트롤 렌더링
+function FieldControl({ field, value, setField, toggleCheck }) {
+  const { key, label, type, options, placeholder, hint, required } = field
+
+  if (type === 'radio') {
+    return (
+      <Field label={label} required={required} hint={hint}>
+        <div className="flex flex-wrap gap-2">
+          {options.map((opt) => (
+            <Pill key={opt} active={value === opt} onClick={() => setField(key, value === opt ? '' : opt)}>
+              {opt}
+            </Pill>
+          ))}
+        </div>
+      </Field>
+    )
+  }
+
+  if (type === 'checkbox') {
+    const arr = value || []
+    return (
+      <Field label={label} required={required} hint={hint}>
+        <div className="flex flex-wrap gap-2">
+          {options.map((opt) => (
+            <Pill key={opt} active={arr.includes(opt)} onClick={() => toggleCheck(key, opt)}>
+              {opt}
+            </Pill>
+          ))}
+        </div>
+      </Field>
+    )
+  }
+
+  if (type === 'textarea') {
+    return (
+      <Field label={label} required={required} hint={hint}>
+        <textarea
+          className={inputCls}
+          rows={3}
+          value={value}
+          onChange={(e) => setField(key, e.target.value)}
+          placeholder={placeholder}
+          maxLength={1000}
+        />
+      </Field>
+    )
+  }
+
+  // text | date
+  return (
+    <Field label={label} required={required} hint={hint}>
+      <input
+        type={type === 'date' ? 'date' : 'text'}
+        className={inputCls}
+        value={value}
+        onChange={(e) => setField(key, e.target.value)}
+        placeholder={placeholder}
+      />
+    </Field>
+  )
+}
+
+// 선택 칩(라디오/체크 공용)
+function Pill({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1.5 text-sm transition ${
+        active
+          ? 'border-sage bg-sage/10 font-medium text-sage-dark'
+          : 'border-slate-300 bg-white text-slate-600 hover:border-sage/50'
+      }`}
+    >
+      {children}
+    </button>
   )
 }

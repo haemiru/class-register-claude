@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "강의신청 페이지 — 관리자 강의 설정 + 참여자 카드결제 (Vite+React+Supabase+토스페이먼츠)",
+  "description": "클래스 신청 페이지 — 관리자 클래스 설정 + 참여자 카드결제 (Vite+React+Supabase+토스페이먼츠)",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

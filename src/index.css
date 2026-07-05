@@ -3,35 +3,35 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
-  @apply bg-ink text-slate-200 antialiased;
+  @apply bg-paper text-slate-700 antialiased;
   font-family: 'Pretendard', system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif;
 }
 
 @layer components {
-  /* 보라→시안 그라데이션 텍스트 */
+  /* 세이지→스카이블루 그라데이션 텍스트 */
   .text-gradient {
-    @apply bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-sage via-sage to-sky bg-clip-text text-transparent;
   }
 
-  /* 글래스 카드 */
+  /* 부드러운 카드 (연한 보더 + 은은한 그림자) */
   .glass {
-    @apply rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl;
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
   }
 
-  /* 그라데이션 버튼 */
+  /* 세이지 그라데이션 버튼 */
   .btn-gradient {
-    @apply bg-gradient-to-r from-violet-500 to-cyan-500 font-semibold text-white shadow-lg shadow-violet-500/25 transition hover:shadow-violet-500/40 hover:brightness-110 disabled:opacity-50 disabled:hover:brightness-100;
+    @apply bg-gradient-to-r from-sage to-sage-dark font-semibold text-white shadow-md shadow-sage/25 transition hover:shadow-sage/40 hover:brightness-105 disabled:opacity-50 disabled:hover:brightness-100;
   }
 }
 
-/* 은은한 그리드 배경 */
+/* 아주 옅은 라이트 그리드 배경 */
 .bg-grid {
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(124, 144, 112, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 144, 112, 0.04) 1px, transparent 1px);
   background-size: 44px 44px;
 }

@@ -1,6 +1,6 @@
-# 강의 신청 페이지 (class-register)
+# 클래스 신청 페이지 (class-register)
 
-관리자가 강의(날짜·장소·주제·정원·참가비)를 등록하면, 참여자가 강의를 선택해 **카드결제**까지 한 흐름으로 신청을 완료하는 웹앱.
+관리자가 클래스(날짜·장소·주제·정원·참가비)를 등록하면, 참여자가 클래스를 선택해 **카드결제**까지 한 흐름으로 신청을 완료하는 웹앱.
 
 - **Stack**: Vite + React + Tailwind + Supabase + Vercel Serverless
 - **PG**: 토스페이먼츠 (결제위젯 + 서버 승인 검증)
@@ -54,12 +54,12 @@ npm run dev               # 프론트만 (localhost:5173)
 
 | 경로 | 설명 |
 |------|------|
-| `/` | 공개 강의 목록 (모집중/마감 표시) |
-| `/class/:id` | 강의 상세 + 신청서 + 결제 |
+| `/` | 공개 클래스 목록 (모집중/마감 표시) |
+| `/class/:id` | 클래스 상세 + 신청서 + 결제 |
 | `/success` `/fail` | 결제 결과 |
 | `/admin` | 관리자 로그인 |
-| `/admin/classes` | 강의 등록·목록·마감 |
-| `/admin/classes/:id` | 강의별 신청자 목록 |
+| `/admin/classes` | 클래스 등록·목록·마감 |
+| `/admin/classes/:id` | 클래스별 신청자 목록 |
 
 ## 배포 (Vercel)
 
@@ -76,6 +76,6 @@ npm run dev               # 프론트만 (localhost:5173)
    → 정원 레이스 시 결제 자동 취소 + 409
 ```
 
-- 금액은 서버에서 강의 `fee`와 대조 (클라이언트 amount 신뢰 안 함)
+- 금액은 서버에서 클래스 `fee`와 대조 (클라이언트 amount 신뢰 안 함)
 - `toss_order_id` unique 로 중복 승인 멱등 차단
 - 정원 확인+insert 는 `cr_register_paid` 트랜잭션 RPC로 동시성 안전

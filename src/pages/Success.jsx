@@ -72,7 +72,7 @@ export default function Success() {
 
   if (state === 'confirming')
     return (
-      <p className="py-16 text-center font-mono text-sm text-slate-400">
+      <p className="py-16 text-center text-sm text-slate-500">
         <span className="animate-pulse">결제를 확인하고 있습니다…</span>
       </p>
     )
@@ -81,10 +81,10 @@ export default function Success() {
     return (
       <div className="space-y-4 py-10 text-center">
         <div className="text-5xl">⚠️</div>
-        <h1 className="text-xl font-bold text-white">신청을 완료하지 못했습니다</h1>
-        <p className="mx-auto max-w-sm text-sm text-slate-400">{message}</p>
-        <Link to="/" className="inline-block text-sm text-violet-300 transition hover:text-cyan-300">
-          강의 목록으로
+        <h1 className="text-xl font-bold text-slate-800">신청을 완료하지 못했습니다</h1>
+        <p className="mx-auto max-w-sm text-sm text-slate-500">{message}</p>
+        <Link to="/" className="inline-block text-sm text-sage-dark transition hover:text-sage">
+          클래스 목록으로
         </Link>
       </div>
     )
@@ -92,7 +92,7 @@ export default function Success() {
   return (
     <div className="space-y-6 py-8 text-center">
       <div className="animate-float text-6xl">🎉</div>
-      <h1 className="text-2xl font-extrabold text-white">
+      <h1 className="text-2xl font-extrabold text-slate-800">
         신청이 <span className="text-gradient">완료</span>되었습니다
       </h1>
       <div className="glass mx-auto max-w-sm p-6 text-left text-sm">
@@ -118,14 +118,14 @@ export default function Success() {
             to={`/my?token=${reg.access_token}`}
             className="btn-gradient inline-block rounded-xl px-6 py-3 text-sm font-semibold"
           >
-            📂 내 강의 자료 받기
+            📂 내 클래스 자료 받기
           </Link>
-          <p className="text-xs text-slate-500">이 링크를 저장해 두면 강의 당일에도 다시 받을 수 있습니다.</p>
+          <p className="text-xs text-slate-500">이 링크를 저장해 두면 클래스 당일에도 다시 받을 수 있습니다.</p>
         </div>
       )}
       <div>
-        <Link to="/" className="inline-block text-sm text-violet-300 transition hover:text-cyan-300">
-          강의 목록으로
+        <Link to="/" className="inline-block text-sm text-sage-dark transition hover:text-sage">
+          클래스 목록으로
         </Link>
       </div>
     </div>
@@ -135,8 +135,8 @@ export default function Success() {
 function Row({ label, value, mono }) {
   return (
     <div className="flex justify-between gap-4">
-      <dt className="text-slate-400">{label}</dt>
-      <dd className={`font-medium text-white ${mono ? 'font-mono' : ''}`}>{value}</dd>
+      <dt className="text-slate-500">{label}</dt>
+      <dd className={`font-medium text-slate-800 ${mono ? 'font-mono' : ''}`}>{value}</dd>
     </div>
   )
 }

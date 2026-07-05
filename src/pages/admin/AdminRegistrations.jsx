@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { adminApi, getSession, signOut } from '../../lib/adminApi.js'
 import { won, formatDateTime } from '../../lib/format.js'
 
-// Design Ref: §6 — 강의별 신청자 목록 (Plan SC-5)
+// Design Ref: §6 — 클래스별 신청자 목록 (Plan SC-5)
 const statusLabel = { paid: '결제완료', pending: '대기', failed: '실패', refunded: '환불됨' }
 
 export default function AdminRegistrations() {
@@ -56,10 +56,10 @@ export default function AdminRegistrations() {
 
   return (
     <div className="space-y-5">
-      <Link to="/admin/classes" className="text-sm text-brand underline">
-        ← 강의 관리로
+      <Link to="/admin/classes" className="text-sm text-sage-dark underline">
+        ← 클래스 관리로
       </Link>
-      <h1 className="text-xl font-bold text-white">
+      <h1 className="text-xl font-bold text-slate-800">
         신청자 {data.class ? `· ${data.class.title}` : ''}
       </h1>
       {data.class && (
@@ -68,12 +68,12 @@ export default function AdminRegistrations() {
         </p>
       )}
 
-      {error && <p className="text-sm text-accent">{error}</p>}
+      {error && <p className="text-sm text-rose-600">{error}</p>}
 
       {loading ? (
-        <p className="text-slate-400">불러오는 중…</p>
+        <p className="text-slate-500">불러오는 중…</p>
       ) : data.registrations.length === 0 ? (
-        <p className="text-slate-400">아직 신청자가 없습니다.</p>
+        <p className="text-slate-500">아직 신청자가 없습니다.</p>
       ) : (
         <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
           <table className="w-full text-sm">

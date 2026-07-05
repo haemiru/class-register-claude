@@ -4,13 +4,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 바이브 코딩 테마 — 보라(brand) + 시안(accent)
-        brand: { DEFAULT: '#8b5cf6', dark: '#7c3aed', light: '#ede9fe' },
-        accent: '#22d3ee',
-        ink: { DEFAULT: '#0b0b12', 800: '#13131d', 700: '#1b1b28' },
-      },
-      fontFamily: {
-        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        // 브레인센트 테마 — 세이지(포인트) + 스카이블루(서브) + 해상 코랄(강조), 아이보리 배경
+        sage: { DEFAULT: '#7C9070', dark: '#5f7256', light: '#e8efe3' },
+        sky: { DEFAULT: '#A7C7E7', light: '#e7f0f9' },
+        coral: { DEFAULT: '#E9A178', dark: '#d4835a' },
+        paper: { DEFAULT: '#FBFAF6', 100: '#ffffff', 200: '#f2f0e8' },
+        accent: '#E9A178',
       },
       keyframes: {
         float: {
@@ -19,7 +18,7 @@ export default {
         },
       },
       animation: {
-        float: 'float 7s ease-in-out infinite',
+        float: 'float 9s ease-in-out infinite',
       },
     },
   },

@@ -12,4 +12,4 @@ export default function Field({ label, required, children, hint }) {
 }
 
 export const inputCls =
-  'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand'
+  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-sage focus:outline-none focus:ring-1 focus:ring-sage'

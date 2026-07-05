@@ -49,9 +49,9 @@ export default function AdminLogin() {
 
   return (
     <div className="mx-auto max-w-sm">
-      <h1 className="mb-4 text-xl font-bold text-white">관리자 로그인</h1>
-      <div className="space-y-4 rounded-xl border bg-white p-5 shadow-sm">
-        {status === 'checking' && <p className="text-slate-400">확인 중…</p>}
+      <h1 className="mb-4 text-xl font-bold text-slate-800">관리자 로그인</h1>
+      <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        {status === 'checking' && <p className="text-slate-500">확인 중…</p>}
 
         {status === 'signedout' && (
           <>
@@ -68,7 +68,7 @@ export default function AdminLogin() {
 
         {status === 'forbidden' && (
           <>
-            <p className="text-sm text-accent">
+            <p className="text-sm text-rose-600">
               <strong>{email}</strong> 계정은 관리자 권한이 없습니다.
             </p>
             <button onClick={onLogout} className="w-full rounded-lg bg-slate-100 py-2.5 font-semibold text-slate-700 hover:bg-slate-200">

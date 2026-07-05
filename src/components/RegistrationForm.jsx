@@ -24,7 +24,7 @@ export default function RegistrationForm({ cls, disabled }) {
     setSubmitting(true)
     try {
       if (isFree) {
-        // 무료 강의: 토스는 0원 결제 불가 → 결제 생략하고 바로 신청 확정
+        // 무료 클래스: 토스는 0원 결제 불가 → 결제 생략하고 바로 신청 확정
         const res = await fetch('/api/register-free', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -76,7 +76,7 @@ export default function RegistrationForm({ cls, disabled }) {
           maxLength={13}
         />
       </Field>
-      <Field label="이번에 꼭 알고 싶은 한가지" hint="미리 알려주시면 강의에 반영해 드려요. (선택)">
+      <Field label="이번에 꼭 알고 싶은 한가지" hint="미리 알려주시면 클래스에 반영해 드려요. (선택)">
         <textarea
           className={inputCls}
           rows={3}
@@ -86,7 +86,7 @@ export default function RegistrationForm({ cls, disabled }) {
           maxLength={500}
         />
       </Field>
-      {error && <p className="text-sm text-accent">{error}</p>}
+      {error && <p className="text-sm text-rose-600">{error}</p>}
       <button
         type="submit"
         disabled={submitting}

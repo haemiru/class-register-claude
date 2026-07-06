@@ -74,6 +74,15 @@
   - 해결: Vercel 환경변수 6개 채우고 **Redeploy**, Google Cloud OAuth 클라이언트(`class-register web`)에 새 콜백 `https://lxszaaxjgauyyjqgagjz.supabase.co/auth/v1/callback` 추가, Supabase Redirect URLs에 `https://class-register-claude.vercel.app/**` 추가(Site URL은 공유 앱 smart-home 것이라 유지)
 - ✅ 매 변경마다 `npm run build` 통과. 커밋 3건: `db9c7fe`(초기 rename 이전) 이후 리디자인/문진/접두사 순차 푸시(최신 `4991620`)
 
+### 2026-07-07 세션 — 배포 E2E 검증 + 클래스 삭제 기능
+- **배포 사이트 E2E 전 구간 통과**(브라우저 자동화): 관리자 Google 로그인 → 클래스 등록/수정(정원 변경) → 참가자 상세 신청 문진(formSchema 전 섹션) 렌더 → 연락처 하이픈 자동 포맷 → 개인정보 동의 게이트 → **무료 신청**(register-free) 완료화면 + access_token/자료 링크 → `form_data` 저장·관리자 문진 조회 → **정원 마감** 파생 표시 + "정원이 마감되어 신청할 수 없습니다" 차단 → **유료 결제** pre-register(pending 선저장) → **토스 결제창 진입**(상품명·금액 정확, 실제 승인은 생략=라이브 키). pending은 정원 미집계(paid만 카운트) 확인. 네트워크로 `register-free 200`/`PATCH 200`/`POST 201` 확증
+- **클래스 삭제 기능 신규 추가**(커밋 `e899679`):
+  - `api/admin/classes/[id].js` DELETE 핸들러: `registrations`·`materials` 행은 `on delete cascade`로 함께 삭제, **스토리지 파일은 cascade 안 되므로 먼저 수동 remove**. **결제 완료(paid) 신청자 있으면 409(`HAS_PAID`) 거부 → `?force=true` 시에만 삭제**(실수 방지)
+  - `adminApi.js`: `deleteClass(id,{force})` + 에러 바디(`err.data`) 노출
+  - `AdminClasses.jsx`: 카드에 "삭제" 버튼 + 2단계 확인(결제자 있으면 "N명 결제 완료, 그래도 삭제?" 재확인)
+  - 배포 후 삭제 기능으로 테스트 클래스 2개 정리(무료=409→force 경로, 유료=pending 즉시). 실사용 검증 완료
+- ✅ `npm run build` 통과
+
 ## 4. 마이그레이션 상태 (운영 DB `lxszaaxjgauyyjqgagjz`, 공유 프로젝트)
 - ✅ **`supabase/schema.sql` 전체 1회 실행 완료** → `classregi_*` 테이블 3 + RPC 4 + 인덱스/RLS + 버킷 `classregi-materials` 생성. anon RPC 200 확인
 - 포함 내용: `email`·`form_data jsonb` 컬럼, `classregi_register_paid`(9인자), `classregi_confirm_paid`, `access_token`, 개인 토큰 자료 흐름 등 최신 전부
@@ -81,14 +90,11 @@
 - **schema.sql 이 유일한 최신 소스.** 새/다른 프로젝트는 schema.sql 1회 실행이면 됨
 
 ## 5. 다음 할 일 (돌아오면 여기부터)
-1. **E2E 테스트** (배포 사이트 `class-register-claude.vercel.app`):
-   - 관리자 로그인 → 클래스 등록(문진 없는 기본 정보만 등록) → 참가자 상세에서 신청 폼(아기 문진) 렌더 확인
-   - 유료: 신청→pre-register→토스 결제→완료→관리자 "문진 보기"로 답변 확인 / 무료(0원): "무료로 신청하기"→완료
-   - 정원 마감/환불 흐름 재확인
-   - ⚠️ **현재 토스 키가 라이브(`live_gck_`/`live_gsk_`)** → 유료 테스트 시 실제 결제됨. 테스트는 test 키로 바꾸거나 무료 클래스로
+1. ✅ **E2E 테스트 완료**(2026-07-07, §3 참고). 유료 결제 승인은 라이브 키라 결제창 진입까지만 검증. 환불 흐름은 `window.confirm` 다이얼로그라 자동화 미검증(수동 필요) — 추후 확인 대상
 2. **신청 문진은 현재 모든 클래스 공통**(베이비 클래스 기준). 비(非)베이비 클래스가 생기면 클래스별 문항 분기 필요 → `formSchema.js` 구조 확장
 3. **회원가입/계정(Supabase Auth)** — 계속 보류 중. 도입 시 계정에 신청·자료 연결
 4. (선택) 백엔드/SQL 주석의 "강의" 표현 정리(사용자 비노출이라 미변경)
+5. (관찰) 환불 버튼(`AdminRegistrations.jsx:51`)·클래스 삭제(`AdminClasses.jsx`)가 `window.confirm` 사용 → 자동화 테스트 시 다이얼로그 블록. 필요 시 커스텀 모달로 교체 고려
 
 ## 6. 주의
 - ⚠️ **토스 키가 현재 라이브(`live_gck_`/`live_gsk_`)** — 유료 신청 시 실제 결제됨. 테스트 시 test 키로 교체하거나 무료 클래스 사용

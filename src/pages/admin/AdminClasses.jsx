@@ -183,6 +183,7 @@ function ClassCard({ c, onChanged }) {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
 
   function startEdit() {
@@ -228,6 +229,34 @@ function ClassCard({ c, onChanged }) {
   async function toggleStatus() {
     await adminApi.updateClass(c.id, { status: c.status === 'open' ? 'closed' : 'open' })
     await onChanged()
+  }
+
+  async function onDelete() {
+    if (!confirm(`"${c.title}" 클래스를 삭제할까요?\n신청 내역과 자료가 함께 삭제되며 되돌릴 수 없습니다.`)) return
+    setError('')
+    setDeleting(true)
+    try {
+      await adminApi.deleteClass(c.id)
+      await onChanged()
+    } catch (e) {
+      // 결제 완료 신청자가 있으면 서버가 409(HAS_PAID) → 재확인 후 강제 삭제
+      if (e.status === 409 && e.data?.error === 'HAS_PAID') {
+        const n = e.data.paidCount
+        if (confirm(`결제 완료된 신청자가 ${n ?? ''}명 있습니다.\n환불 없이 삭제하면 결제 기록도 사라집니다. 그래도 삭제할까요?`)) {
+          try {
+            await adminApi.deleteClass(c.id, { force: true })
+            await onChanged()
+            return
+          } catch {
+            setError('삭제에 실패했습니다.')
+          }
+        }
+      } else {
+        setError('삭제에 실패했습니다.')
+      }
+    } finally {
+      setDeleting(false)
+    }
   }
 
   if (editing) {
@@ -302,7 +331,15 @@ function ClassCard({ c, onChanged }) {
         <button onClick={toggleStatus} className="text-slate-500 underline">
           {c.status === 'open' ? '마감 처리' : '재오픈'}
         </button>
+        <button
+          onClick={onDelete}
+          disabled={deleting}
+          className="ml-auto text-rose-600 underline disabled:opacity-50"
+        >
+          {deleting ? '삭제 중…' : '삭제'}
+        </button>
       </div>
+      {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}
       <MaterialManager classId={c.id} />
     </div>
   )

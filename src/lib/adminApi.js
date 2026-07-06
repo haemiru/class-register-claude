@@ -39,6 +39,7 @@ async function req(path, { method = 'GET', body } = {}) {
   if (!res.ok) {
     const err = new Error(json.error || '요청 실패')
     err.status = res.status
+    err.data = json
     throw err
   }
   return json
@@ -49,6 +50,8 @@ export const adminApi = {
   listClasses: () => req('/classes'),
   createClass: (data) => req('/classes', { method: 'POST', body: data }),
   updateClass: (id, data) => req(`/classes/${id}`, { method: 'PATCH', body: data }),
+  deleteClass: (id, { force = false } = {}) =>
+    req(`/classes/${id}${force ? '?force=true' : ''}`, { method: 'DELETE' }),
   listRegistrations: (classId) => req(`/registrations?classId=${classId}`),
   refundRegistration: (registrationId) => req('/registrations', { method: 'POST', body: { registrationId } }),
   // 강의 자료

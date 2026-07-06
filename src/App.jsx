@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Routes, Route, Link } from 'react-router-dom'
 // Design Ref: §6 — Frontend Routes
 import ClassList from './pages/ClassList.jsx'
@@ -5,11 +6,20 @@ import ClassDetail from './pages/ClassDetail.jsx'
 import Success from './pages/Success.jsx'
 import Fail from './pages/Fail.jsx'
 import My from './pages/My.jsx'
+import Login from './pages/Login.jsx'
+import Account from './pages/Account.jsx'
 import AdminLogin from './pages/admin/AdminLogin.jsx'
 import AdminClasses from './pages/admin/AdminClasses.jsx'
 import AdminRegistrations from './pages/admin/AdminRegistrations.jsx'
+import { getSession, onAuthChange } from './lib/authApi.js'
 
 function Header() {
+  const [authed, setAuthed] = useState(false)
+  useEffect(() => {
+    getSession().then((s) => setAuthed(!!s))
+    return onAuthChange((s) => setAuthed(!!s))
+  }, [])
+
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-paper/80 backdrop-blur-lg">
       <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3.5">
@@ -24,9 +34,14 @@ function Header() {
             브레인센트 <span className="font-normal text-slate-500">클래스</span>
           </span>
         </Link>
-        <Link to="/admin" className="text-sm text-slate-500 transition hover:text-sage">
-          관리자
-        </Link>
+        <nav className="flex items-center gap-4 text-sm text-slate-500">
+          {authed ? (
+            <Link to="/account" className="transition hover:text-sage">내 신청</Link>
+          ) : (
+            <Link to="/login" className="transition hover:text-sage">로그인</Link>
+          )}
+          <Link to="/admin" className="transition hover:text-sage">관리자</Link>
+        </nav>
       </div>
     </header>
   )
@@ -50,6 +65,8 @@ export default function App() {
           <Route path="/success" element={<Success />} />
           <Route path="/fail" element={<Fail />} />
           <Route path="/my" element={<My />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/account" element={<Account />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/classes" element={<AdminClasses />} />
           <Route path="/admin/classes/:id" element={<AdminRegistrations />} />

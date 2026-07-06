@@ -1,16 +1,18 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import Field, { inputCls } from './Field.jsx'
 import { requestCardPayment } from '../lib/toss.js'
 import { won, formatPhone } from '../lib/format.js'
 import { getTemplate, emptyFormData, PRIVACY_NOTICE } from '../lib/formSchema.js'
+import { getSession, getAccessToken } from '../lib/authApi.js'
 
-// Design Ref: §6, §7 — 상세 신청서(보호자·문진·동의) → 유료: pre-register 후 결제 / 무료: 즉시 확정
+// Design Ref: §6, §7, §8 — 상세 신청서. 로그인 필수 → 유료: pre-register 후 결제 / 무료: 즉시 확정
 // 문진 내용은 클래스의 form_type 에 맞는 템플릿(getTemplate)으로 렌더한다.
 export default function RegistrationForm({ cls, disabled }) {
   const nav = useNavigate()
   const isFree = Number(cls.fee) === 0
   const template = getTemplate(cls.form_type)
+  const [authState, setAuthState] = useState('loading') // loading | in | out
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
@@ -18,6 +20,19 @@ export default function RegistrationForm({ cls, disabled }) {
   const [consent, setConsent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  // 로그인 필수 — 세션 확인 + 계정 이메일 프리필
+  useEffect(() => {
+    ;(async () => {
+      const session = await getSession()
+      if (session?.user) {
+        setAuthState('in')
+        if (session.user.email) setEmail(session.user.email)
+      } else {
+        setAuthState('out')
+      }
+    })()
+  }, [])
 
   const setField = (key, value) => setData((d) => ({ ...d, [key]: value }))
   const toggleCheck = (key, option) =>
@@ -51,12 +66,20 @@ export default function RegistrationForm({ cls, disabled }) {
     setSubmitting(true)
     const form_data = { ...data, privacyConsent: true }
     const base = { classId: cls.id, name: name.trim(), phone: phone.trim(), email: email.trim(), form_data }
+    // 로그인 필수 — 신청을 계정에 연결하기 위해 access_token 을 서버로 전달
+    const token = await getAccessToken()
+    if (!token) {
+      setError('로그인이 필요합니다. 다시 로그인해 주세요.')
+      setSubmitting(false)
+      return
+    }
+    const authHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
     try {
       if (isFree) {
         // 무료: 결제 없이 바로 신청 확정
         const res = await fetch('/api/register-free', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify(base),
         })
         const json = await res.json()
@@ -71,7 +94,7 @@ export default function RegistrationForm({ cls, disabled }) {
       // 유료: 신청 내용을 먼저 저장(pending) → 결제창 진입
       const res = await fetch('/api/pre-register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify(base),
       })
       const json = await res.json()
@@ -97,6 +120,29 @@ export default function RegistrationForm({ cls, disabled }) {
     return (
       <div className="rounded-lg bg-slate-100 p-4 text-center text-sm text-slate-500">
         정원이 마감되어 신청할 수 없습니다.
+      </div>
+    )
+  }
+
+  if (authState === 'loading') {
+    return <p className="py-6 text-center text-sm text-slate-500">불러오는 중…</p>
+  }
+
+  // 로그인 필수 — 미로그인 시 로그인 유도(로그인 후 이 클래스로 복귀)
+  if (authState === 'out') {
+    return (
+      <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-6 text-center">
+        <p className="text-sm text-slate-600">
+          클래스 신청은 <span className="font-semibold text-slate-800">로그인 후</span> 가능합니다.
+          <br />
+          신청 내역과 자료를 계정에서 편하게 확인할 수 있어요.
+        </p>
+        <Link
+          to={`/login?next=${encodeURIComponent(`/class/${cls.id}`)}`}
+          className="btn-gradient inline-block rounded-xl px-6 py-3 text-sm"
+        >
+          로그인하고 신청하기
+        </Link>
       </div>
     )
   }

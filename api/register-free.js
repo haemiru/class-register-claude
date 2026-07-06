@@ -1,10 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import { getAdminClient } from './_lib/supabaseAdmin.js'
+import { getAuthUser } from './_lib/auth.js'
 
-// Design Ref: §7 — 무료 강의(fee=0) 신청. 토스는 0원 결제 불가 → 결제 없이 바로 확정.
+// Design Ref: §7, §8 — 무료 강의(fee=0) 신청(로그인 필수). 토스는 0원 결제 불가 → 결제 없이 바로 확정.
 // 정원/마감 검증은 결제 경로와 동일하게 classregi_register_paid 트랜잭션 RPC 재사용.
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'METHOD_NOT_ALLOWED' })
+
+  const user = await getAuthUser(req)
+  if (!user) return res.status(401).json({ error: 'LOGIN_REQUIRED' })
 
   const { classId, name, phone, email, note, form_data } = req.body || {}
   if (!classId || !name || !phone || !email) return res.status(400).json({ error: 'INVALID_INPUT' })
@@ -37,6 +41,7 @@ export default async function handler(req, res) {
     p_note: note ? String(note).slice(0, 500) : null,
     p_email: email ? String(email).slice(0, 200) : null,
     p_form_data: form_data && typeof form_data === 'object' ? form_data : {},
+    p_user_id: user.id,
   })
 
   if (rpcErr) {

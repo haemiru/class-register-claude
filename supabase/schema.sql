@@ -29,6 +29,7 @@ create table if not exists classregi_registrations (
   toss_order_id    text unique,            -- 멱등성: 동일 주문 중복 승인 차단
   amount           int,
   access_token     uuid not null default gen_random_uuid(),  -- 결제자 개인 자료 링크 토큰
+  user_id          uuid,                                      -- 신청↔계정(Supabase Auth) 연결(익명 신청은 null)
   created_at       timestamptz not null default now()
 );
 
@@ -36,6 +37,8 @@ create index if not exists classregi_reg_class_paid_idx
   on classregi_registrations(class_id, payment_status);
 create unique index if not exists classregi_reg_access_token_idx
   on classregi_registrations(access_token);
+create index if not exists classregi_reg_user_idx
+  on classregi_registrations(user_id);
 
 -- ── 강의 자료 ─────────────────────────────────────────
 -- Design Ref: §4 — 강의별 첨부 자료. 결제 완료자만 다운로드(서버 서명 URL 경유).
@@ -121,6 +124,7 @@ grant execute on function classregi_class_detail(uuid) to anon, authenticated;
 -- 트랜잭션 내에서 paid 카운트 확인 후 insert (동시성 안전).
 drop function if exists classregi_register_paid(uuid, text, text, text, text, int);
 drop function if exists classregi_register_paid(uuid, text, text, text, text, int, text);
+drop function if exists classregi_register_paid(uuid, text, text, text, text, int, text, text, jsonb);
 create or replace function classregi_register_paid(
   p_class_id uuid,
   p_name text,
@@ -130,7 +134,8 @@ create or replace function classregi_register_paid(
   p_amount int,
   p_note text default null,
   p_email text default null,
-  p_form_data jsonb default '{}'::jsonb
+  p_form_data jsonb default '{}'::jsonb,
+  p_user_id uuid default null
 ) returns classregi_registrations
 language plpgsql
 as $$
@@ -153,10 +158,10 @@ begin
   end if;
 
   insert into classregi_registrations
-    (class_id, name, phone, email, note, form_data, payment_status, toss_payment_key, toss_order_id, amount)
+    (class_id, name, phone, email, note, form_data, payment_status, toss_payment_key, toss_order_id, amount, user_id)
   values
     (p_class_id, p_name, p_phone, p_email, p_note, coalesce(p_form_data, '{}'::jsonb),
-     'paid', p_payment_key, p_order_id, p_amount)
+     'paid', p_payment_key, p_order_id, p_amount, p_user_id)
   returning * into v_row;
 
   return v_row;
@@ -212,3 +217,22 @@ begin
 end;
 $$;
 grant execute on function classregi_confirm_paid(text, text, int) to anon, authenticated;
+
+-- ── 참가자 계정: 내 신청 목록 (auth.uid() 기준) ──────────
+-- Design Ref: §8 — 로그인 사용자가 자기 신청·자료(access_token)를 모아본다.
+drop function if exists classregi_my_registrations();
+create function classregi_my_registrations()
+returns table (
+  id uuid, class_id uuid, class_title text, starts_at timestamptz,
+  payment_status text, amount int, access_token uuid, created_at timestamptz
+)
+language sql security definer set search_path = public
+as $$
+  select r.id, r.class_id, c.title, c.starts_at,
+         r.payment_status, r.amount, r.access_token, r.created_at
+  from classregi_registrations r
+  join classregi_classes c on c.id = r.class_id
+  where r.user_id = auth.uid()
+  order by r.created_at desc;
+$$;
+grant execute on function classregi_my_registrations() to authenticated;

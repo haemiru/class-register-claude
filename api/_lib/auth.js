@@ -28,6 +28,13 @@ async function getUserFromToken(token) {
   return data.user
 }
 
+// Bearer 토큰에서 로그인 사용자 반환(가드 없이, 없으면 null). 참가자 신청↔계정 연결용.
+export async function getAuthUser(req) {
+  const header = req.headers.authorization || ''
+  const token = header.startsWith('Bearer ') ? header.slice(7) : ''
+  return getUserFromToken(token)
+}
+
 // 관리자 라우트 가드. 유효 토큰 + 허용 이메일이면 true, 아니면 401/403 응답 후 false.
 export async function requireAdmin(req, res) {
   const header = req.headers.authorization || ''

@@ -1,11 +1,15 @@
 import { randomUUID } from 'node:crypto'
 import { getAdminClient } from './_lib/supabaseAdmin.js'
+import { getAuthUser } from './_lib/auth.js'
 
-// Design Ref: §7 — 유료 결제 전, 신청 내용을 pending 행으로 선저장.
+// Design Ref: §7, §8 — 유료 결제 전, 신청 내용을 pending 행으로 선저장(로그인 필수).
 // 민감한 문진(form_data)을 URL에 싣지 않기 위해 결제 이전에 서버로 직접 저장하고,
 // 결제 승인(/api/confirm-payment) 시 이 행을 paid 로 승격(classregi_confirm_paid)한다.
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'METHOD_NOT_ALLOWED' })
+
+  const user = await getAuthUser(req)
+  if (!user) return res.status(401).json({ error: 'LOGIN_REQUIRED' })
 
   const { classId, name, phone, email, form_data } = req.body || {}
   if (!classId || !name || !phone || !email) return res.status(400).json({ error: 'INVALID_INPUT' })
@@ -45,6 +49,7 @@ export default async function handler(req, res) {
     payment_status: 'pending',
     toss_order_id: orderId,
     amount: cls.fee,
+    user_id: user.id,
   })
   if (insErr) return res.status(500).json({ error: 'PRE_REGISTER_FAILED' })
 

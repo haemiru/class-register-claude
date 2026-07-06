@@ -96,18 +96,50 @@
   - 테스트 클래스 정리 완료
 - ✅ 매 변경마다 `npm run build` 통과
 
+### 2026-07-07 세션 (이어서) — 참가자 회원가입/계정 (진행 중, 배포 전)
+> ⚠️ **이 기능은 아직 배포 안 됨.** 코드 완성·`npm run build` 통과·**SQL 마이그레이션 실행 완료**. 배포(커밋/푸시) 전에 **② 확인메일 끄기 + ③ 카카오 설정**이 남음(§5 참고). 로그인이 신청 필수가 되므로, 인증 설정 없이 배포하면 실사용 신청이 막힘 → 설정 후 배포할 것.
+
+- **결정사항**: 참가자 인증 = **이메일+비밀번호 & 카카오 로그인**(매직링크·Google은 부모 진입장벽/인앱브라우저 이슈로 제외). **로그인 신청 필수**. 이메일 **확인메일 끔**(즉시 가입). 관리자(Google)와 같은 Supabase Auth 세션 공유(관리자는 `ADMIN_EMAILS`로만 구분 → 충돌 없음). 자료는 기존 `access_token`/`/my` 재사용
+- **구현 완료(로컬 작업트리 — 아직 커밋·푸시 안 함. 설정 후 배포 예정)**:
+  - `src/lib/authApi.js`: 가입(`signUpEmail`)·로그인(`signInEmail`)·카카오(`signInKakao`)·세션·`getAccessToken`·`myRegistrations`(RPC)
+  - `src/pages/Login.jsx`: 이메일+비번(로그인/가입 토글) + 카카오 버튼. `?next=` 복귀. 확인메일 켜짐 감지 시 안내
+  - `src/pages/Account.jsx`: `/account` 내 신청 목록(로그인 전용) → 각 신청 "자료 받기"는 `/my?token=` 재사용
+  - `src/App.jsx`: 라우트 `/login`·`/account` 추가, 헤더 인증상태(로그인/내 신청)
+  - `RegistrationForm.jsx`: **로그인 게이트**(미로그인 시 "로그인하고 신청" → `/login?next=/class/:id`), 계정 이메일 프리필, 신청 fetch에 `Authorization: Bearer` 실어 보냄
+  - 서버 `pre-register`/`register-free`: `getAuthUser(req)`로 로그인 필수(`401 LOGIN_REQUIRED`) + `user_id` 저장. `api/_lib/auth.js`에 `getAuthUser` export 추가
+  - **DB**(schema.sql + `supabase/migration-accounts.sql`, **실행 완료**): `classregi_registrations.user_id` 컬럼 + 인덱스, `classregi_register_paid`에 `p_user_id`(10인자), `classregi_my_registrations()` RPC(auth.uid 기준)
+- **배포 순서(중요)**: 마이그레이션(완료) → **확인메일 끄기 + 카카오 설정** → 커밋/푸시(Vercel 배포) → E2E(이메일 가입→로그인→신청→`/account` 확인)
+
 ## 4. 마이그레이션 상태 (운영 DB `lxszaaxjgauyyjqgagjz`, 공유 프로젝트)
 - ✅ **`supabase/schema.sql` 전체 1회 실행 완료** → `classregi_*` 테이블 3 + RPC 4 + 인덱스/RLS + 버킷 `classregi-materials` 생성. anon RPC 200 확인
 - 포함 내용: `email`·`form_data jsonb` 컬럼, `classregi_register_paid`(9인자), `classregi_confirm_paid`, `access_token`, 개인 토큰 자료 흐름 등 최신 전부
 - `supabase/migration-form-fields.sql`은 **기존 `cr_` DB 업그레이드용**(이번 신규 실행엔 불필요, 참고용 보관)
-- **schema.sql 이 유일한 최신 소스.** 새/다른 프로젝트는 schema.sql 1회 실행이면 됨
+- ✅ **`supabase/migration-form-type.sql` 실행 완료**(2026-07-07): `form_type` 컬럼 + 공개 RPC 2개 재정의
+- ✅ **`supabase/migration-accounts.sql` 실행 완료**(2026-07-07): `user_id` 컬럼·인덱스 + `register_paid` 10인자 + `classregi_my_registrations` RPC
+- **schema.sql 이 유일한 최신 소스.** 새/다른 프로젝트는 schema.sql 1회 실행이면 됨(위 마이그레이션 내용 모두 포함)
 
-## 5. 다음 할 일 (돌아오면 여기부터)
-1. ✅ **E2E 테스트 완료**(2026-07-07, §3 참고). 유료 결제 승인은 라이브 키라 결제창 진입까지만 검증. 환불 흐름은 `window.confirm` 다이얼로그라 자동화 미검증(수동 필요) — 추후 확인 대상
-2. ✅ **클래스별 문진 유형(form_type) 분기 완료**(2026-07-07, §3). `baby`/`basic` 템플릿, 관리자에서 유형 선택. 새 유형은 `formSchema.js FORM_TEMPLATES` 에 추가하면 됨
-3. **회원가입/계정(Supabase Auth)** — 진행 예정. 도입 시 계정에 신청·자료 연결. 방향 결정 필요(인증방식·가입강제여부·기존 익명+토큰 흐름 통합)
-4. (선택) 백엔드/SQL 주석의 "강의" 표현 정리(사용자 비노출이라 미변경)
-5. (관찰) 환불 버튼(`AdminRegistrations.jsx:51`)·클래스 삭제(`AdminClasses.jsx`)가 `window.confirm` 사용 → 자동화 테스트 시 다이얼로그 블록. 필요 시 커스텀 모달로 교체 고려
+## 5. 다음 할 일 (돌아오면 **★여기부터★**)
+
+### ★ 회원가입/계정 — 마무리 (코드·SQL 완료, 남은 건 설정 후 배포)
+**돌아오면 이 순서로. SQL은 실행 완료됨.**
+1. **카카오 로그인 설정** (여기부터 시작):
+   - Kakao Developers(developers.kakao.com) 앱 생성 → **REST API 키** 확보 → 보안에서 **Client Secret** 생성·활성화
+   - Kakao 카카오로그인 활성화 + **Redirect URI** 등록: `https://lxszaaxjgauyyjqgagjz.supabase.co/auth/v1/callback`
+   - Supabase › Authentication › Providers › **Kakao 활성화**(REST API 키=Client ID, Client Secret 입력)
+   - Supabase › Authentication › URL Configuration › Redirect URLs 에 `https://class-register-claude.vercel.app/**` 확인
+2. **확인메일 끄기**: Supabase › Authentication › (Email provider/Settings) **"Confirm email" OFF**. ⚠️ 공유 프로젝트 전역(smart-home 영향)
+3. **커밋/푸시 → Vercel 배포** (지금 로컬에 미푸시 상태. §3 배포 순서 준수 — 설정 먼저)
+4. **E2E 검증**: 이메일 회원가입 → 로그인 → 클래스 신청(로그인 게이트/프리필/무료 신청) → `/account` 내 신청 목록 → "자료 받기"(토큰 `/my`) 확인. 카카오 로그인도 버튼 눌러 확인
+5. 남은 예외: 유료 결제 승인은 라이브 키라 결제창 진입까지만(무료로 검증), 환불은 `window.confirm`이라 수동
+
+### 이미 완료 (참고)
+- ✅ **E2E 테스트**(2026-07-07). 유료는 결제창 진입까지, 환불은 자동화 미검증(수동)
+- ✅ **클래스별 문진 유형(form_type) 분기**. `baby`/`basic`, 새 유형은 `formSchema.js FORM_TEMPLATES` 추가
+- ✅ **클래스 삭제 기능**(paid 보호 409→force, 스토리지 정리)
+
+### 저우선/관찰
+- (선택) 백엔드/SQL 주석의 "강의" 표현 정리(사용자 비노출이라 미변경)
+- (관찰) 환불(`AdminRegistrations.jsx:51`)·클래스 삭제(`AdminClasses.jsx`)가 `window.confirm` 사용 → 자동화 테스트 시 다이얼로그 블록. 필요 시 커스텀 모달 교체
 
 ## 6. 주의
 - ⚠️ **토스 키가 현재 라이브(`live_gck_`/`live_gsk_`)** — 유료 신청 시 실제 결제됨. 테스트 시 test 키로 교체하거나 무료 클래스 사용

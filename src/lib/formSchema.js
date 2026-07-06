@@ -45,9 +45,12 @@ const CONSULT_OPTIONS = [
   '기타',
 ]
 
+const REFERRAL_OPTIONS = ['인스타그램', '블로그', '카카오톡', '지인 소개', '기존 수강생 추천', '기타']
+
+// ── 베이비 수면·호흡 문진 섹션(현행) ─────────────────────
 // 각 섹션은 { title, fields[] }. field: { key, label, type, options?, placeholder?, hint?, required? }
 // type: 'text' | 'date' | 'radio' | 'checkbox' | 'textarea'
-export const FORM_SECTIONS = [
+const BABY_SECTIONS = [
   {
     title: '아기 정보',
     fields: [
@@ -109,12 +112,7 @@ export const FORM_SECTIONS = [
   {
     title: '마지막으로',
     fields: [
-      {
-        key: 'referralSource',
-        label: '브레인센트를 알게 된 경로',
-        type: 'radio',
-        options: ['인스타그램', '블로그', '카카오톡', '지인 소개', '기존 수강생 추천', '기타'],
-      },
+      { key: 'referralSource', label: '브레인센트를 알게 된 경로', type: 'radio', options: REFERRAL_OPTIONS },
       {
         key: 'consultTopics',
         label: '가장 먼저 상담받고 싶은 주제',
@@ -126,19 +124,67 @@ export const FORM_SECTIONS = [
   },
 ]
 
-// 모든 필드를 평탄화 (관리자 조회에서 라벨 매핑용)
-export const FORM_FIELDS = FORM_SECTIONS.flatMap((s) => s.fields)
+// ── 기본(간단) 문진 — 비(非)베이비 클래스용 ───────────────
+const BASIC_SECTIONS = [
+  {
+    title: '추가 정보',
+    fields: [
+      {
+        key: 'participantNote',
+        label: '문의·요청 사항',
+        type: 'textarea',
+        placeholder: '궁금한 점이나 요청 사항을 자유롭게 적어 주세요.',
+      },
+      { key: 'referralSource', label: '브레인센트를 알게 된 경로', type: 'radio', options: REFERRAL_OPTIONS },
+    ],
+  },
+]
+
+// ── 문진 템플릿 맵 ────────────────────────────────────────
+// 클래스의 form_type 이 이 중 하나를 가리킨다. 없으면 DEFAULT_FORM_TYPE 로 폴백.
+export const FORM_TEMPLATES = {
+  baby: {
+    label: '베이비 수면·호흡',
+    privacyItems: '보호자 성함, 연락처, 이메일, 아기 기본 정보',
+    sections: BABY_SECTIONS,
+  },
+  basic: {
+    label: '기본(간단)',
+    privacyItems: '보호자 성함, 연락처, 이메일',
+    sections: BASIC_SECTIONS,
+  },
+}
+
+export const DEFAULT_FORM_TYPE = 'baby'
+
+// 관리자 클래스 등록/수정 폼의 문진 유형 선택지
+export const FORM_TYPE_OPTIONS = Object.entries(FORM_TEMPLATES).map(([value, t]) => ({ value, label: t.label }))
+
+export function getTemplate(type) {
+  return FORM_TEMPLATES[type] || FORM_TEMPLATES[DEFAULT_FORM_TYPE]
+}
+
+// 템플릿의 모든 필드를 평탄화
+export function templateFields(type) {
+  return getTemplate(type).sections.flatMap((s) => s.fields)
+}
 
 // 초기 form_data 상태 (checkbox → 배열, 그 외 → '')
-export function emptyFormData() {
+export function emptyFormData(type) {
   const out = {}
-  for (const f of FORM_FIELDS) out[f.key] = f.type === 'checkbox' ? [] : ''
+  for (const f of templateFields(type)) out[f.key] = f.type === 'checkbox' ? [] : ''
   return out
 }
 
+// 관리자 조회에서 라벨 매핑용: 모든 템플릿 필드를 key→field 로 병합
+// (한 클래스의 신청은 그 클래스 템플릿을 쓰지만, 레거시·유형 변경 대비 전체 병합으로 조회)
+export const FIELD_BY_KEY = Object.fromEntries(
+  Object.values(FORM_TEMPLATES).flatMap((t) => t.sections.flatMap((s) => s.fields.map((f) => [f.key, f]))),
+)
+
 // 개인정보 수집·이용 동의 (필수). form_data.privacyConsent 로 저장.
+// items 는 템플릿별(getTemplate(type).privacyItems), 아래는 공통 항목.
 export const PRIVACY_NOTICE = {
-  items: '보호자 성함, 연락처, 이메일, 아기 기본 정보',
   purpose: '수강 신청 확인, 수업 안내, 자료 제공, 사후 관리',
   retention: '수업 종료 후 1년',
 }

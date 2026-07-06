@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { title, description, location, starts_at, capacity, fee } = req.body || {}
+    const { title, description, location, starts_at, capacity, fee, form_type } = req.body || {}
     if (!title || !location || !starts_at || !capacity) {
       return res.status(400).json({ error: 'INVALID_INPUT' })
     }
@@ -37,6 +37,7 @@ export default async function handler(req, res) {
         capacity: Number(capacity),
         fee: Number(fee) || 0,
         status: 'open',
+        form_type: form_type || 'baby',
       })
       .select()
       .single()

@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { adminApi, getSession, signOut } from '../../lib/adminApi.js'
 import { won, formatDateTime } from '../../lib/format.js'
-import { FORM_FIELDS } from '../../lib/formSchema.js'
+import { templateFields } from '../../lib/formSchema.js'
 
 // Design Ref: §6 — 클래스별 신청자 목록 (Plan SC-5)
 const statusLabel = { paid: '결제완료', pending: '대기', failed: '실패', refunded: '환불됨' }
@@ -140,7 +140,7 @@ export default function AdminRegistrations() {
                   {expanded.has(r.id) && (
                     <tr className="border-t bg-slate-50/60">
                       <td colSpan={7} className="px-4 py-3">
-                        <FormDetail formData={r.form_data} note={r.note} />
+                        <FormDetail formData={r.form_data} note={r.note} formType={data.class?.form_type} />
                       </td>
                     </tr>
                   )}
@@ -154,10 +154,10 @@ export default function AdminRegistrations() {
   )
 }
 
-// 신청 문진 상세(form_data)를 라벨과 함께 표시
-function FormDetail({ formData, note }) {
+// 신청 문진 상세(form_data)를 라벨과 함께 표시 (클래스 form_type 템플릿 기준)
+function FormDetail({ formData, note, formType }) {
   const fd = formData || {}
-  const rows = FORM_FIELDS.map((f) => ({ label: f.label, value: fd[f.key], type: f.type })).filter(
+  const rows = templateFields(formType).map((f) => ({ label: f.label, value: fd[f.key], type: f.type })).filter(
     (r) => (Array.isArray(r.value) ? r.value.length > 0 : r.value !== '' && r.value != null),
   )
 

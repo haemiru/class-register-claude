@@ -11,6 +11,7 @@ create table if not exists classregi_classes (
   capacity    int  not null check (capacity > 0),
   fee         int  not null check (fee >= 0),
   status      text not null default 'open',   -- 'open' | 'closed'
+  form_type   text not null default 'baby',    -- 신청 문진 템플릿 유형(src/lib/formSchema.js: 'baby'|'basic')
   created_at  timestamptz not null default now()
 );
 
@@ -72,16 +73,17 @@ create policy classregi_classes_public_read
 -- ── 공개 조회용 RPC (집계만 노출, 개인정보 X) ─────────
 -- Design Ref: §6 — 클라이언트는 paid 카운트가 필요하나 classregi_registrations 는 RLS 차단.
 -- security definer 로 '개수'만 안전하게 노출.
+drop function if exists classregi_open_classes();
 create or replace function classregi_open_classes()
 returns table (
   id uuid, title text, description text, location text,
-  starts_at timestamptz, capacity int, fee int, status text,
+  starts_at timestamptz, capacity int, fee int, status text, form_type text,
   paid_count bigint
 )
 language sql security definer set search_path = public
 as $$
   select c.id, c.title, c.description, c.location, c.starts_at,
-         c.capacity, c.fee, c.status,
+         c.capacity, c.fee, c.status, c.form_type,
          coalesce(p.cnt, 0) as paid_count
   from classregi_classes c
   left join (
@@ -94,16 +96,17 @@ as $$
   order by c.starts_at asc;
 $$;
 
+drop function if exists classregi_class_detail(uuid);
 create or replace function classregi_class_detail(p_id uuid)
 returns table (
   id uuid, title text, description text, location text,
-  starts_at timestamptz, capacity int, fee int, status text,
+  starts_at timestamptz, capacity int, fee int, status text, form_type text,
   paid_count bigint
 )
 language sql security definer set search_path = public
 as $$
   select c.id, c.title, c.description, c.location, c.starts_at,
-         c.capacity, c.fee, c.status,
+         c.capacity, c.fee, c.status, c.form_type,
          coalesce((select count(*) from classregi_registrations
                    where class_id = c.id and payment_status = 'paid'), 0) as paid_count
   from classregi_classes c

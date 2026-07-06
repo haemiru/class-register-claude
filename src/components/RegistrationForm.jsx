@@ -3,16 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import Field, { inputCls } from './Field.jsx'
 import { requestCardPayment } from '../lib/toss.js'
 import { won, formatPhone } from '../lib/format.js'
-import { FORM_SECTIONS, emptyFormData, PRIVACY_NOTICE } from '../lib/formSchema.js'
+import { getTemplate, emptyFormData, PRIVACY_NOTICE } from '../lib/formSchema.js'
 
-// Design Ref: §6, §7 — 상세 신청서(보호자·아기·수면/호흡 문진·동의) → 유료: pre-register 후 결제 / 무료: 즉시 확정
+// Design Ref: §6, §7 — 상세 신청서(보호자·문진·동의) → 유료: pre-register 후 결제 / 무료: 즉시 확정
+// 문진 내용은 클래스의 form_type 에 맞는 템플릿(getTemplate)으로 렌더한다.
 export default function RegistrationForm({ cls, disabled }) {
   const nav = useNavigate()
   const isFree = Number(cls.fee) === 0
+  const template = getTemplate(cls.form_type)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
-  const [data, setData] = useState(emptyFormData)
+  const [data, setData] = useState(() => emptyFormData(cls.form_type))
   const [consent, setConsent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -27,7 +29,13 @@ export default function RegistrationForm({ cls, disabled }) {
   function validate() {
     if (!name.trim() || !phone.trim() || !email.trim()) return '보호자 성함·연락처·이메일을 입력해 주세요.'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return '이메일 형식을 확인해 주세요.'
-    if (!data.babyBirth) return '아기 생년월일을 입력해 주세요.'
+    // 템플릿에서 required 로 표시된 문진 필드 검사
+    for (const f of template.sections.flatMap((s) => s.fields)) {
+      if (!f.required) continue
+      const v = data[f.key]
+      const empty = Array.isArray(v) ? v.length === 0 : !String(v ?? '').trim()
+      if (empty) return `${f.label}을(를) 입력해 주세요.`
+    }
     if (!consent) return '개인정보 수집·이용에 동의해 주셔야 신청할 수 있습니다.'
     return ''
   }
@@ -122,8 +130,8 @@ export default function RegistrationForm({ cls, disabled }) {
         </Field>
       </div>
 
-      {/* 문진 섹션 */}
-      {FORM_SECTIONS.map((section) => (
+      {/* 문진 섹션 (클래스 form_type 템플릿) */}
+      {template.sections.map((section) => (
         <div key={section.title} className="space-y-4">
           <SectionTitle>{section.title}</SectionTitle>
           {section.fields.map((f) => (
@@ -136,7 +144,7 @@ export default function RegistrationForm({ cls, disabled }) {
       <div className="space-y-3">
         <SectionTitle>개인정보 수집·이용 동의</SectionTitle>
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-500">
-          <p>· 수집 항목: {PRIVACY_NOTICE.items}</p>
+          <p>· 수집 항목: {template.privacyItems}</p>
           <p>· 수집 목적: {PRIVACY_NOTICE.purpose}</p>
           <p>· 보관 기간: {PRIVACY_NOTICE.retention}</p>
         </div>

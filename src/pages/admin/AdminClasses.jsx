@@ -3,9 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { adminApi, getSession, signOut, uploadMaterial } from '../../lib/adminApi.js'
 import Field, { inputCls } from '../../components/Field.jsx'
 import { won, formatDateTime, formatBytes, toDatetimeLocal } from '../../lib/format.js'
+import { FORM_TYPE_OPTIONS, DEFAULT_FORM_TYPE } from '../../lib/formSchema.js'
 
 // Design Ref: §6 — 관리자 클래스 관리: 등록 폼 + 목록(수정/마감)
-const empty = { title: '', description: '', location: '', starts_at: '', capacity: 20, fee: 0 }
+const empty = { title: '', description: '', location: '', starts_at: '', capacity: 20, fee: 0, form_type: DEFAULT_FORM_TYPE }
 
 export default function AdminClasses() {
   const nav = useNavigate()
@@ -125,6 +126,15 @@ export default function AdminClasses() {
         <Field label="설명">
           <textarea rows="3" className={inputCls} value={form.description} onChange={set('description')} />
         </Field>
+        <Field label="신청 문진 유형" hint="참가자 신청 폼에 표시할 문진 양식">
+          <select className={inputCls} value={form.form_type} onChange={set('form_type')}>
+            {FORM_TYPE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </Field>
         <Field label="클래스 자료 (선택)" hint="결제 완료자만 다운로드할 수 있습니다. 여러 개 가능.">
           <label className="inline-block cursor-pointer text-sm text-sage-dark underline">
             + 파일 선택
@@ -194,6 +204,7 @@ function ClassCard({ c, onChanged }) {
       starts_at: toDatetimeLocal(c.starts_at),
       capacity: c.capacity,
       fee: c.fee,
+      form_type: c.form_type || DEFAULT_FORM_TYPE,
     })
     setError('')
     setEditing(true)
@@ -216,6 +227,7 @@ function ClassCard({ c, onChanged }) {
         starts_at: new Date(form.starts_at).toISOString(),
         capacity: Number(form.capacity),
         fee: Number(form.fee),
+        form_type: form.form_type,
       })
       setEditing(false)
       await onChanged()
@@ -282,6 +294,15 @@ function ClassCard({ c, onChanged }) {
           </div>
           <Field label="설명">
             <textarea rows="3" className={inputCls} value={form.description} onChange={set('description')} />
+          </Field>
+          <Field label="신청 문진 유형" hint="참가자 신청 폼에 표시할 문진 양식">
+            <select className={inputCls} value={form.form_type} onChange={set('form_type')}>
+              {FORM_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
           </Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
           <div className="flex gap-2">

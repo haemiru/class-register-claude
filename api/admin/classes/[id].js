@@ -2,7 +2,7 @@ import { getAdminClient } from '../../_lib/supabaseAdmin.js'
 import { requireAdmin } from '../../_lib/auth.js'
 
 // Design Ref: §5 — PATCH /api/admin/classes/:id (수정·마감) · DELETE (삭제)
-const EDITABLE = ['title', 'description', 'location', 'starts_at', 'capacity', 'fee', 'status']
+const EDITABLE = ['title', 'description', 'location', 'starts_at', 'capacity', 'fee', 'status', 'form_type']
 const BUCKET = 'classregi-materials'
 
 export default async function handler(req, res) {

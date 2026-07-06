@@ -22,7 +22,11 @@ export default async function handler(req, res) {
     if (!classId) return res.status(400).json({ error: 'MISSING_CLASS_ID' })
 
     const [{ data: cls }, { data: registrations, error }] = await Promise.all([
-      supabase.from('classregi_classes').select('id, title, starts_at, capacity, fee').eq('id', classId).single(),
+      supabase
+        .from('classregi_classes')
+        .select('id, title, starts_at, capacity, fee, form_type')
+        .eq('id', classId)
+        .single(),
       supabase
         .from('classregi_registrations')
         .select('id, name, phone, email, note, form_data, payment_status, amount, created_at')

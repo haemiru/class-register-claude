@@ -83,6 +83,19 @@
   - 배포 후 삭제 기능으로 테스트 클래스 2개 정리(무료=409→force 경로, 유료=pending 즉시). 실사용 검증 완료
 - ✅ `npm run build` 통과
 
+### 2026-07-07 세션 (이어서) — 클래스별 문진 유형(form_type) 분기
+- **클래스별 신청 문진 분기 구현**(커밋 `acb4dda`, 버그수정 `71abfa0`):
+  - `formSchema.js`: 단일 `FORM_SECTIONS` → **템플릿 맵 `FORM_TEMPLATES`**(`baby`=현행 수면·호흡 문진 / `basic`=간단 문진: 문의·요청+유입경로). `getTemplate/templateFields/emptyFormData(type)`, `FIELD_BY_KEY`, `FORM_TYPE_OPTIONS`. `PRIVACY_NOTICE.items` → 템플릿별 `privacyItems`
+  - `RegistrationForm`: 클래스 `form_type` 템플릿으로 문진 렌더 + required 검사 템플릿 기반, 개인정보 수집항목도 템플릿별
+  - `AdminRegistrations`: 클래스 `form_type` 기준 문진 답변 라벨 매핑
+  - `AdminClasses`: 등록·수정 폼에 "신청 문진 유형" select 추가
+  - API: POST 는 `form_type` 저장(기본 `baby`), PATCH EDITABLE 에 추가
+  - **DB**: `classregi_classes.form_type` 컬럼 + 공개 RPC(`open_classes`/`class_detail`) 반환에 `form_type` 추가. `supabase/migration-form-type.sql` 신설·운영 DB 실행 완료
+  - **버그 발견·수정**(`71abfa0`): `api/admin/registrations.js` GET 의 클래스 select 에 `form_type` 누락 → 관리자 문진 조회가 baby 템플릿으로 폴백돼 basic 전용 문항 미표시. select 에 `form_type` 추가로 해결
+  - **E2E 검증 완료**: `basic` 클래스 등록 → 참가자 폼이 간단 문진(추가 정보만)으로 렌더 + 개인정보 수집항목 축소 확인 → 무료 신청 → 관리자 문진 조회에서 문의·요청/유입경로 정상 표시. 기존 클래스는 `form_type='baby'` 기본값으로 하위호환
+  - 테스트 클래스 정리 완료
+- ✅ 매 변경마다 `npm run build` 통과
+
 ## 4. 마이그레이션 상태 (운영 DB `lxszaaxjgauyyjqgagjz`, 공유 프로젝트)
 - ✅ **`supabase/schema.sql` 전체 1회 실행 완료** → `classregi_*` 테이블 3 + RPC 4 + 인덱스/RLS + 버킷 `classregi-materials` 생성. anon RPC 200 확인
 - 포함 내용: `email`·`form_data jsonb` 컬럼, `classregi_register_paid`(9인자), `classregi_confirm_paid`, `access_token`, 개인 토큰 자료 흐름 등 최신 전부
@@ -91,8 +104,8 @@
 
 ## 5. 다음 할 일 (돌아오면 여기부터)
 1. ✅ **E2E 테스트 완료**(2026-07-07, §3 참고). 유료 결제 승인은 라이브 키라 결제창 진입까지만 검증. 환불 흐름은 `window.confirm` 다이얼로그라 자동화 미검증(수동 필요) — 추후 확인 대상
-2. **신청 문진은 현재 모든 클래스 공통**(베이비 클래스 기준). 비(非)베이비 클래스가 생기면 클래스별 문항 분기 필요 → `formSchema.js` 구조 확장
-3. **회원가입/계정(Supabase Auth)** — 계속 보류 중. 도입 시 계정에 신청·자료 연결
+2. ✅ **클래스별 문진 유형(form_type) 분기 완료**(2026-07-07, §3). `baby`/`basic` 템플릿, 관리자에서 유형 선택. 새 유형은 `formSchema.js FORM_TEMPLATES` 에 추가하면 됨
+3. **회원가입/계정(Supabase Auth)** — 진행 예정. 도입 시 계정에 신청·자료 연결. 방향 결정 필요(인증방식·가입강제여부·기존 익명+토큰 흐름 통합)
 4. (선택) 백엔드/SQL 주석의 "강의" 표현 정리(사용자 비노출이라 미변경)
 5. (관찰) 환불 버튼(`AdminRegistrations.jsx:51`)·클래스 삭제(`AdminClasses.jsx`)가 `window.confirm` 사용 → 자동화 테스트 시 다이얼로그 블록. 필요 시 커스텀 모달로 교체 고려
 

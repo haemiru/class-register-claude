@@ -44,12 +44,14 @@ export default function RegistrationForm({ cls, disabled }) {
   function validate() {
     if (!name.trim() || !phone.trim() || !email.trim()) return '보호자 성함·연락처·이메일을 입력해 주세요.'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return '이메일 형식을 확인해 주세요.'
-    // 템플릿에서 required 로 표시된 문진 필드 검사
+    // 템플릿 문진 필드 검사 (required 누락 + 날짜 미래 방지)
     for (const f of template.sections.flatMap((s) => s.fields)) {
-      if (!f.required) continue
       const v = data[f.key]
       const empty = Array.isArray(v) ? v.length === 0 : !String(v ?? '').trim()
-      if (empty) return `${f.label}을(를) 입력해 주세요.`
+      if (f.required && empty) return `${f.label}을(를) 입력해 주세요.`
+      if (f.type === 'date' && !empty && String(v) > todayLocal()) {
+        return `${f.label}은(는) 오늘 이후로 선택할 수 없습니다.`
+      }
     }
     if (!consent) return '개인정보 수집·이용에 동의해 주셔야 신청할 수 있습니다.'
     return ''
@@ -153,7 +155,7 @@ export default function RegistrationForm({ cls, disabled }) {
       <SectionTitle>보호자 정보</SectionTitle>
       <div className="space-y-4">
         <Field label="보호자 성함" required>
-          <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="홍길동" />
+          <input lang="ko" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="홍길동" />
         </Field>
         <Field label="연락처" required hint="안내·환불 연락에 사용됩니다.">
           <input
@@ -280,13 +282,21 @@ function FieldControl({ field, value, setField, toggleCheck }) {
     <Field label={label} required={required} hint={hint}>
       <input
         type={type === 'date' ? 'date' : 'text'}
+        lang={type === 'date' ? undefined : 'ko'}
         className={inputCls}
         value={value}
         onChange={(e) => setField(key, e.target.value)}
         placeholder={placeholder}
+        max={type === 'date' ? todayLocal() : undefined}
       />
     </Field>
   )
+}
+
+// 로컬 기준 오늘 날짜(YYYY-MM-DD). 생년월일 등에 미래 선택을 막는 데 사용.
+function todayLocal() {
+  const d = new Date()
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 }
 
 // 선택 칩(라디오/체크 공용)
@@ -295,9 +305,9 @@ function Pill({ active, onClick, children }) {
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full border px-3 py-1.5 text-sm transition ${
+      className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
         active
-          ? 'border-sage bg-sage/10 font-medium text-sage-dark'
+          ? 'border-sage bg-sage font-semibold text-white shadow-sm'
           : 'border-slate-300 bg-white text-slate-600 hover:border-sage/50'
       }`}
     >

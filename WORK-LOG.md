@@ -96,8 +96,8 @@
   - 테스트 클래스 정리 완료
 - ✅ 매 변경마다 `npm run build` 통과
 
-### 2026-07-07 세션 (이어서) — 참가자 회원가입/계정 (진행 중, 배포 전)
-> ⚠️ **이 기능은 아직 배포 안 됨.** 코드 완성·`npm run build` 통과·**SQL 마이그레이션 실행 완료**. 배포(커밋/푸시) 전에 **② 확인메일 끄기 + ③ 카카오 설정**이 남음(§5 참고). 로그인이 신청 필수가 되므로, 인증 설정 없이 배포하면 실사용 신청이 막힘 → 설정 후 배포할 것.
+### 2026-07-07 세션 (이어서) — 참가자 회원가입/계정 (✅ 배포 완료)
+> ✅ **배포 완료**(커밋 `49db5e8`). 코드·`npm run build`·SQL 마이그레이션·카카오/확인메일 설정 모두 끝. 아래 세션 로그에 배포·후속 개선 정리됨.
 
 - **결정사항**: 참가자 인증 = **이메일+비밀번호 & 카카오 로그인**(매직링크·Google은 부모 진입장벽/인앱브라우저 이슈로 제외). **로그인 신청 필수**. 이메일 **확인메일 끔**(즉시 가입). 관리자(Google)와 같은 Supabase Auth 세션 공유(관리자는 `ADMIN_EMAILS`로만 구분 → 충돌 없음). 자료는 기존 `access_token`/`/my` 재사용
 - **구현 완료(로컬 작업트리 — 아직 커밋·푸시 안 함. 설정 후 배포 예정)**:
@@ -110,6 +110,18 @@
   - **DB**(schema.sql + `supabase/migration-accounts.sql`, **실행 완료**): `classregi_registrations.user_id` 컬럼 + 인덱스, `classregi_register_paid`에 `p_user_id`(10인자), `classregi_my_registrations()` RPC(auth.uid 기준)
 - **배포 순서(중요)**: 마이그레이션(완료) → **확인메일 끄기 + 카카오 설정** → 커밋/푸시(Vercel 배포) → E2E(이메일 가입→로그인→신청→`/account` 확인)
 
+### 2026-07-07 세션 (이어서) — 회원가입 배포 + 카카오 설정 + 폼 개선 + 관리자 추가
+- **카카오/인증 설정 완료**(사용자가 콘솔에서 직접): Kakao Developers 앱 REST API 키(`b1adba7...`)·Client Secret → Supabase Kakao provider 활성화. Kakao 리다이렉트 URI `https://lxszaaxjgauyyjqgagjz.supabase.co/auth/v1/callback` 등록·저장. Supabase Redirect URLs에 `https://class-register-claude.vercel.app/**` 확인. **Confirm email OFF**(즉시 가입). Site URL은 smart-home 것 유지. **Vercel엔 카카오 관련 추가 env 불필요**(OAuth는 Supabase가 처리, 앱은 `signInWithOAuth({provider:'kakao'})`만 호출)
+- **회원가입/계정 배포**(커밋 `49db5e8`, push): §3 회원가입 블록의 코드(authApi/Login/Account/App/RegistrationForm 로그인게이트/pre-register·register-free 로그인필수+user_id)를 커밋·푸시 → Vercel 자동 배포. `npm run build` 통과
+- **신청 폼 UI 개선**(커밋 `56714e1`, `RegistrationForm.jsx`):
+  - **선택 칩(Pill) 대비 강화**: 선택 상태를 연한 배경(`bg-sage/10`) → **진한 세이지 채움+흰 글씨+그림자**로. 성별/출생정보 등 라디오·체크박스 선택 여부가 명확해짐(공용 `Pill` 컴포넌트라 전 문진에 적용)
+  - **생년월일 미래 차단**: date 입력에 `max=오늘`(로컬 기준 `todayLocal()`) + 제출 검증에도 미래 날짜면 거부. baby 템플릿 `babyBirth` 등 모든 date 타입에 적용
+  - **이름칸 한글 입력 기본**: 보호자 성함·아기 이름(text) 입력에 `lang="ko"`(모바일 IME 한글 우선). 이메일·연락처는 별도 입력이라 미영향
+- **관리자 계정 추가**: `gggcp1234@gmail.com`을 `ADMIN_EMAILS`에 추가(기존 `junominu@gmail.com`과 함께). Vercel **Production+Preview** env 갱신(`vercel env rm/add`) + 로컬 `.env` 갱신 → **프로덕션 재배포**(`vercel --prod`, env 변경은 재배포해야 반영됨). 새 관리자는 그 구글 계정으로 **구글 로그인**하면 접속(비교는 소문자 기준). 입력값 `gamil.com`은 `gmail.com` 오타로 확인·정정
+- **Vercel CLI 연결됨**: 이 폴더가 `junominus-projects/class-register-claude`에 link됨(`.vercel/` 생성, gitignore). 이후 env 수정은 CLI로 가능: `npx vercel env ls` / `rm ADMIN_EMAILS production --yes` / `printf '%s' '<값>' | npx vercel env add ADMIN_EMAILS production` → `npx vercel --prod --yes`
+- **앱 아이콘 제작**(카카오 앱 아이콘용, 128px): 브랜드 팔레트+잎+호흡물결 3안 생성. **A안 채택**(세이지 배경+아이보리 잎+상단 호흡물결) → `~/Downloads/brainscent-icon-A-128.png`. 원본 SVG(icon-A/B/C.svg)는 세션 스크래치패드(임시). 필요 시 SVG로 재렌더 가능
+- ✅ E2E는 사용자가 직접 검증 예정(무료 클래스 생성해서 가입→로그인→무료 신청→`/account`→자료 받기). 참가비 0 클래스는 결제 생략 경로라 라이브 키에도 돈 안 나감 → 실사용 무료 클래스 겸 테스트 수단
+
 ## 4. 마이그레이션 상태 (운영 DB `lxszaaxjgauyyjqgagjz`, 공유 프로젝트)
 - ✅ **`supabase/schema.sql` 전체 1회 실행 완료** → `classregi_*` 테이블 3 + RPC 4 + 인덱스/RLS + 버킷 `classregi-materials` 생성. anon RPC 200 확인
 - 포함 내용: `email`·`form_data jsonb` 컬럼, `classregi_register_paid`(9인자), `classregi_confirm_paid`, `access_token`, 개인 토큰 자료 흐름 등 최신 전부
@@ -120,22 +132,25 @@
 
 ## 5. 다음 할 일 (돌아오면 **★여기부터★**)
 
-### ★ 회원가입/계정 — 마무리 (코드·SQL 완료, 남은 건 설정 후 배포)
-**돌아오면 이 순서로. SQL은 실행 완료됨.**
-1. **카카오 로그인 설정** (여기부터 시작):
-   - Kakao Developers(developers.kakao.com) 앱 생성 → **REST API 키** 확보 → 보안에서 **Client Secret** 생성·활성화
-   - Kakao 카카오로그인 활성화 + **Redirect URI** 등록: `https://lxszaaxjgauyyjqgagjz.supabase.co/auth/v1/callback`
-   - Supabase › Authentication › Providers › **Kakao 활성화**(REST API 키=Client ID, Client Secret 입력)
-   - Supabase › Authentication › URL Configuration › Redirect URLs 에 `https://class-register-claude.vercel.app/**` 확인
-2. **확인메일 끄기**: Supabase › Authentication › (Email provider/Settings) **"Confirm email" OFF**. ⚠️ 공유 프로젝트 전역(smart-home 영향)
-3. **커밋/푸시 → Vercel 배포** (지금 로컬에 미푸시 상태. §3 배포 순서 준수 — 설정 먼저)
-4. **E2E 검증**: 이메일 회원가입 → 로그인 → 클래스 신청(로그인 게이트/프리필/무료 신청) → `/account` 내 신청 목록 → "자료 받기"(토큰 `/my`) 확인. 카카오 로그인도 버튼 눌러 확인
-5. 남은 예외: 유료 결제 승인은 라이브 키라 결제창 진입까지만(무료로 검증), 환불은 `window.confirm`이라 수동
+### ★ 현재 상태: 계획 기능 전부 배포 완료 → **개선사항 대기 모드**
+회원가입/계정까지 배포돼 **핵심 기능은 완성**. 다음 세션은 대개 **사용자가 말하는 개선사항을 §3 세션 로그 참고해 수정 → 커밋/푸시 or `vercel --prod`** 흐름. 최신 배포 상태·파일 위치는 §3(특히 2026-07-07 마지막 세션)과 아래 참고.
+
+- **사용자 E2E는 직접 진행 중**: 무료 클래스 만들어 가입→로그인→무료 신청→`/account`→자료 받기 확인. 문제 나오면 그 지점부터 수정
+- **개선 작업 시 주소록**:
+  - 신청 폼/문진: `src/components/RegistrationForm.jsx` + 문항 정의 `src/lib/formSchema.js`(템플릿 `baby`/`basic`)
+  - 관리자 클래스 관리: `src/pages/admin/AdminClasses.jsx`(등록/수정 폼, 참가비 0=무료), 신청자 조회 `AdminRegistrations.jsx`
+  - 인증/계정: `src/lib/authApi.js`, `src/pages/Login.jsx`·`Account.jsx`, 서버 가드 `api/_lib/auth.js`(`getAuthUser`/`requireAdmin`/`ADMIN_EMAILS`)
+  - 배포: 커밋/푸시하면 Vercel 자동 배포. env만 바꾸면 재배포 필요 → `npx vercel --prod --yes`
+- **남은 운영 예외(코드 아님)**: 유료 결제 승인은 라이브 키라 결제창 진입까지만(무료로 검증), 환불은 `window.confirm`이라 수동
 
 ### 이미 완료 (참고)
+- ✅ **회원가입/계정**(이메일+카카오, 로그인 신청 필수) 배포. 카카오/확인메일 설정 완료
+- ✅ **신청 폼 개선**: 선택칩 대비 강화·생년월일 미래 차단·이름칸 한글(`lang="ko"`)
+- ✅ **관리자 2인**: `junominu@gmail.com`, `gggcp1234@gmail.com` (ADMIN_EMAILS, 구글 로그인)
 - ✅ **E2E 테스트**(2026-07-07). 유료는 결제창 진입까지, 환불은 자동화 미검증(수동)
 - ✅ **클래스별 문진 유형(form_type) 분기**. `baby`/`basic`, 새 유형은 `formSchema.js FORM_TEMPLATES` 추가
 - ✅ **클래스 삭제 기능**(paid 보호 409→force, 스토리지 정리)
+- ✅ **앱 아이콘**(카카오용) A안 = `~/Downloads/brainscent-icon-A-128.png`
 
 ### 저우선/관찰
 - (선택) 백엔드/SQL 주석의 "강의" 표현 정리(사용자 비노출이라 미변경)
@@ -159,7 +174,7 @@
 | `VITE_TOSS_CLIENT_KEY` | 클라이언트 | 토스 client key (**현재 라이브 `live_gck_`**) |
 | `SUPABASE_SERVICE_ROLE_KEY` | 서버 | service_role 키 (레거시 JWT `eyJ...` 사용 중) |
 | `TOSS_SECRET_KEY` | 서버 | 토스 secret key (**현재 라이브 `live_gsk_`**) |
-| `ADMIN_EMAILS` | 서버 | `junominu@gmail.com` |
+| `ADMIN_EMAILS` | 서버 | `junominu@gmail.com,gggcp1234@gmail.com` (Production+Preview) |
 
 - 로컬 `.env`도 동일하게 채워둠(`.gitignore`됨). 로컬에서 `/api/*`까지 테스트하려면 `npm run dev`(프론트만) 대신 **`npx vercel dev`**
 - Supabase 접속 정보는 코드에 하드코딩 없음(전부 env). 프로젝트 교체 = env만 바꾸고 재배포

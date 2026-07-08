@@ -148,8 +148,8 @@
   - `src/pages/admin/AdminLogin.jsx`: **카카오 버튼 + 이메일/비밀번호 폼**(로그인/‘비밀번호 설정(가입)’ 토글, 참가자 `Login.jsx`와 동일 패턴, `authApi.signInEmail/signUpEmail` 재사용). 로그인 성공 → `onAuthChange`→`evaluate`가 권한확인·이동. "권한 없음" 화면에 **본인 이메일+고유 ID 표시**(부트스트랩 폴백)
 - **관리자 이메일**(사용자 제공): 카카오 계정 이메일 junominu=`junominu@kakao.com`, gggcp1234=`gggcp1234@gmail.com`. `ADMIN_EMAILS`에 `junominu@kakao.com` 추가(기존 `junominu@gmail.com`,`gggcp1234@gmail.com` 유지). 이메일/비밀번호는 `ADMIN_EMAILS`에 있는 이메일로 '비밀번호 설정(가입)' 후 로그인하면 관리자
 - **부트스트랩 폴백**: 혹시 로그인 시 이메일이 안 잡히면 "권한 없음" 화면의 uid를 `ADMIN_USER_IDS`에 넣고 재배포. **락아웃 위험 없음**
-- ⏳ **환경변수 갱신 대기**: `ADMIN_EMAILS`에 `junominu@kakao.com` 추가 → Vercel(Prod+Preview)+로컬 `.env` → `vercel --prod` 재배포
-- ✅ `npm run build` 통과. Supabase Kakao provider·Redirect URLs(`.../**`)는 참가자용으로 이미 설정됨(추가 콘솔 작업 불필요)
+- ✅ **배포 완료**(커밋 `3a11c1c`, push): `ADMIN_EMAILS`에 `junominu@kakao.com` 추가 → Vercel Prod+Preview(값 pull로 검증)+로컬 `.env` 갱신 → `npx vercel --prod --yes` 재배포(`class-register-claude.vercel.app` 200 확인). `npm run build` 통과. Supabase Kakao provider·Redirect URLs(`.../**`)는 참가자용으로 이미 설정됨(추가 콘솔 작업 불필요)
+- ⏳ **남은 확인(사용자)**: gggcp1234가 카카오톡 안에서 관리자 링크 열어 **카카오 또는 이메일/비밀번호로 로그인** 성공하는지. 실패 시 "권한 없음" 화면의 uid를 받아 `ADMIN_USER_IDS`에 추가·재배포
 
 ## 4. 마이그레이션 상태 (운영 DB `lxszaaxjgauyyjqgagjz`, 공유 프로젝트)
 - ✅ **`supabase/schema.sql` 전체 1회 실행 완료** → `classregi_*` 테이블 3 + RPC 4 + 인덱스/RLS + 버킷 `classregi-materials` 생성. anon RPC 200 확인
@@ -157,29 +157,31 @@
 - `supabase/migration-form-fields.sql`은 **기존 `cr_` DB 업그레이드용**(이번 신규 실행엔 불필요, 참고용 보관)
 - ✅ **`supabase/migration-form-type.sql` 실행 완료**(2026-07-07): `form_type` 컬럼 + 공개 RPC 2개 재정의
 - ✅ **`supabase/migration-accounts.sql` 실행 완료**(2026-07-07): `user_id` 컬럼·인덱스 + `register_paid` 10인자 + `classregi_my_registrations` RPC
-- ⏳ **`supabase/migration-form-schema.sql` 실행 대기**(2026-07-08 작성): `form_schema jsonb` 컬럼 + 공개 RPC 2개(`open_classes`/`class_detail`) 반환에 `form_schema` 추가. **폼 빌더 배포 전 SQL Editor에서 1회 실행 필요**
+- ✅ **`supabase/migration-form-schema.sql` 실행 완료**(2026-07-08): `form_schema jsonb` 컬럼 + 공개 RPC 2개(`open_classes`/`class_detail`) 반환에 `form_schema` 추가. (사용자가 SQL Editor 실행 확인)
 - **schema.sql 이 유일한 최신 소스.** 새/다른 프로젝트는 schema.sql 1회 실행이면 됨(위 마이그레이션 내용 모두 포함)
 
 ## 5. 다음 할 일 (돌아오면 **★여기부터★**)
 
-### ★ 현재 상태: 계획 기능 전부 배포 완료 → **개선사항 대기 모드**
-회원가입/계정까지 배포돼 **핵심 기능은 완성**. 다음 세션은 대개 **사용자가 말하는 개선사항을 §3 세션 로그 참고해 수정 → 커밋/푸시 or `vercel --prod`** 흐름. 최신 배포 상태·파일 위치는 §3(특히 2026-07-07 마지막 세션)과 아래 참고.
+### ★ 현재 상태(2026-07-08): 동적 폼 빌더 + 관리자 로그인 전환 **배포 완료** → 사용자 확인 1건 대기
+이번 세션 2건(§3 2026-07-08 세션 2개) 코드·SQL·env·배포 모두 끝. 다음 세션은 대개 **사용자 개선사항을 §3 세션 로그 참고해 수정 → 커밋/푸시(자동배포) or env 변경 시 `npx vercel --prod --yes`** 흐름.
 
-- **사용자 E2E는 직접 진행 중**: 무료 클래스 만들어 가입→로그인→무료 신청→`/account`→자료 받기 확인. 문제 나오면 그 지점부터 수정
-- ⏳ **폼 빌더 배포 남음**(2026-07-08): `migration-form-schema.sql` 실행 → 커밋/푸시 → E2E(관리자 클래스 생성 시 질문 구성 → 참가자 폼 렌더 → 신청자 조회 라벨 확인 → 기존 baby 클래스 폴백 회귀)
+- ⏳ **유일한 열린 항목**: gggcp1234 관리자가 카카오톡에서 관리자 링크 열어 **카카오/이메일·비밀번호 로그인** 되는지 확인. 실패하면 "권한 없음" 화면의 **uid**를 받아 `ADMIN_USER_IDS`에 추가 → `npx vercel --prod --yes`
+- (선택) 동적 폼 빌더 E2E: 관리자 클래스 생성 시 질문 구성 → 참가자 폼 렌더(드롭다운·숫자 포함) → 신청자 조회 라벨 → 기존 baby 클래스 폴백 회귀
 - **개선 작업 시 주소록**:
   - 신청 폼/문진: `src/components/RegistrationForm.jsx` + 필드 허브 `src/lib/formSchema.js`(`resolveFields`/`FIELD_TYPES`, 레거시 템플릿 `baby`/`basic`은 폴백·프리셋). **동적 폼은 클래스 `form_schema`가 소스**, 빌더 `src/components/FormBuilder.jsx`
-  - 관리자 클래스 관리: `src/pages/admin/AdminClasses.jsx`(등록/수정 폼, 참가비 0=무료), 신청자 조회 `AdminRegistrations.jsx`
-  - 인증/계정: `src/lib/authApi.js`, `src/pages/Login.jsx`·`Account.jsx`, 서버 가드 `api/_lib/auth.js`(`getAuthUser`/`requireAdmin`/`ADMIN_EMAILS`)
+  - 관리자 클래스 관리: `src/pages/admin/AdminClasses.jsx`(등록/수정 폼 + FormBuilder, 참가비 0=무료), 신청자 조회 `AdminRegistrations.jsx`
+  - 인증/계정: 참가자 `src/lib/authApi.js`·`src/pages/Login.jsx`·`Account.jsx` / 관리자 `src/lib/adminApi.js`·`src/pages/admin/AdminLogin.jsx`(카카오+이메일/비번) / 서버 가드 `api/_lib/auth.js`(`getAuthUser`/`requireAdmin`/`isAdminUser`=`ADMIN_EMAILS`||`ADMIN_USER_IDS`)
   - 배포: 커밋/푸시하면 Vercel 자동 배포. env만 바꾸면 재배포 필요 → `npx vercel --prod --yes`
 - **남은 운영 예외(코드 아님)**: 유료 결제 승인은 라이브 키라 결제창 진입까지만(무료로 검증), 환불은 `window.confirm`이라 수동
 
 ### 이미 완료 (참고)
+- ✅ **동적 신청 폼(폼 빌더)**(2026-07-08 배포, 커밋 `aa9412f`): 클래스별 `form_schema`로 질문 구성. 유형 7종, `baby`/`basic`은 빠른시작 프리셋
+- ✅ **관리자 로그인 카카오+이메일/비밀번호**(2026-07-08 배포, 커밋 `3a11c1c`): 구글 제거(인앱브라우저 차단), 판별=이메일 OR uid
 - ✅ **회원가입/계정**(이메일+카카오, 로그인 신청 필수) 배포. 카카오/확인메일 설정 완료
 - ✅ **신청 폼 개선**: 선택칩 대비 강화·생년월일 미래 차단·이름칸 한글(`lang="ko"`)
-- ✅ **관리자 2인**: `junominu@gmail.com`, `gggcp1234@gmail.com` (ADMIN_EMAILS, 구글 로그인)
+- ✅ **관리자 판별**: `ADMIN_EMAILS`=`junominu@gmail.com,gggcp1234@gmail.com,junominu@kakao.com` (+ 필요 시 `ADMIN_USER_IDS`)
 - ✅ **E2E 테스트**(2026-07-07). 유료는 결제창 진입까지, 환불은 자동화 미검증(수동)
-- ✅ **클래스별 문진 유형(form_type) 분기**. `baby`/`basic`, 새 유형은 `formSchema.js FORM_TEMPLATES` 추가
+- ✅ **클래스별 문진 유형(form_type)**: 폼 빌더의 폴백·프리셋으로 남음
 - ✅ **클래스 삭제 기능**(paid 보호 409→force, 스토리지 정리)
 - ✅ **앱 아이콘**(카카오용) A안 = `~/Downloads/brainscent-icon-A-128.png`
 
@@ -192,12 +194,12 @@
 - ⚠️ **Supabase 프로젝트는 다른 앱(smart-home)과 공유** — SQL 실행 시 `create ... if not exists`/`or replace`라 안전하나, 다른 테이블 건드리지 말 것. 접두사 `classregi_` 유지. Supabase **Site URL은 smart-home 것**이라 바꾸지 말고 Redirect URLs에 **추가만**
 - **`VITE_` 값은 빌드 타임에 번들에 박힘** → 값 바꾸면 Vercel **Redeploy** 필수 (이번 로그인 장애의 원인이었음)
 - 서버 키(service_role, TOSS_SECRET_KEY)는 `VITE_` 접두사 금지 (클라이언트 노출됨). `.env`는 `.gitignore`에 있어 미커밋
-- 관리자 권한은 `ADMIN_EMAILS`(쉼표 구분)로만 결정. 현재 관리자 = `junominu@gmail.com`
-- 구글 로그인: Supabase Auth Google provider **활성화 토글 ON + Save** 필수 (안 켜면 "provider is not enabled")
-- 두 URL 구분: 구글 "승인된 리디렉션 URI" = Supabase 콜백(`...supabase.co/auth/v1/callback`) / Supabase "Redirect URLs" = 앱 주소(`class-register-claude.vercel.app/**`)
+- 관리자 권한은 **`ADMIN_EMAILS`(이메일) 또는 `ADMIN_USER_IDS`(Supabase uid)** 중 하나라도 매칭되면 부여(`api/_lib/auth.js` `isAdminUser`). 현재 관리자 이메일 = `junominu@gmail.com,gggcp1234@gmail.com,junominu@kakao.com`. 관리자 로그인은 **카카오 + 이메일/비밀번호**(구글 버튼 제거 — 인앱브라우저 차단 때문)
+- ⚠️ **관리자 로그인이 "권한 없음"으로 막히면** 그 화면에 뜨는 **uid**를 `ADMIN_USER_IDS`(쉼표 구분)에 추가하고 `npx vercel --prod --yes`. 카카오가 이메일을 안 넘기는 경우의 확실한 우회로. 락아웃 위험 없음
+- (레거시) 구글 로그인은 버튼 제거됐으나 `signInWithGoogle`/provider 설정은 남아있음. 구글 "승인된 리디렉션 URI"=Supabase 콜백(`...supabase.co/auth/v1/callback`) / Supabase "Redirect URLs"=앱 주소(`class-register-claude.vercel.app/**`)
 - 이 repo는 독립 git repo (Claude-prj 모노레포와 별개)
 
-## 7. 환경변수 (Vercel + 로컬 `.env`, 총 6개) — ✅ 2026-07-06 설정 완료
+## 7. 환경변수 (Vercel + 로컬 `.env`) — ✅ 2026-07-06 설정 완료(이후 `ADMIN_EMAILS` 갱신)
 | 변수 | 구분 | 값 |
 |---|---|---|
 | `VITE_SUPABASE_URL` | 클라이언트 | `https://lxszaaxjgauyyjqgagjz.supabase.co` |
@@ -205,7 +207,9 @@
 | `VITE_TOSS_CLIENT_KEY` | 클라이언트 | 토스 client key (**현재 라이브 `live_gck_`**) |
 | `SUPABASE_SERVICE_ROLE_KEY` | 서버 | service_role 키 (레거시 JWT `eyJ...` 사용 중) |
 | `TOSS_SECRET_KEY` | 서버 | 토스 secret key (**현재 라이브 `live_gsk_`**) |
-| `ADMIN_EMAILS` | 서버 | `junominu@gmail.com,gggcp1234@gmail.com` (Production+Preview) |
+| `ADMIN_EMAILS` | 서버 | `junominu@gmail.com,gggcp1234@gmail.com,junominu@kakao.com` (Production+Preview, 2026-07-08 갱신) |
+| `ADMIN_USER_IDS` | 서버(선택) | 미설정. 카카오 이메일 미제공 시 관리자 uid를 쉼표 구분으로 넣는 폴백 |
 
 - 로컬 `.env`도 동일하게 채워둠(`.gitignore`됨). 로컬에서 `/api/*`까지 테스트하려면 `npm run dev`(프론트만) 대신 **`npx vercel dev`**
+- env 갱신 절차(값 교체): `npx vercel env rm <NAME> production --yes` → `printf '%s' '<값>' | npx vercel env add <NAME> production`(Preview도 동일) → `npx vercel --prod --yes`. 값 확인은 `npx vercel env pull <임시파일> --environment=production --yes`
 - Supabase 접속 정보는 코드에 하드코딩 없음(전부 env). 프로젝트 교체 = env만 바꾸고 재배포

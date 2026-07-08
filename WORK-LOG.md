@@ -138,6 +138,19 @@
 - ✅ `npm run build` 통과 + dev 서버 200 확인. **DB 마이그레이션·E2E는 사용자 진행 예정**(아래 §4·§5)
 - ⏳ 커밋/푸시 전(작업트리). 배포 순서: **`migration-form-schema.sql` 실행 → 커밋/푸시** → E2E
 
+### 2026-07-08 세션 (이어서) — 관리자 로그인 카카오+이메일/비밀번호 전환
+> 문제: 관리자 링크를 카카오톡으로 전달 → gggcp1234 관리자가 **카카오톡 인앱브라우저**에서 열면 **구글 OAuth가 인앱브라우저를 차단**(`disallowed_useragent`)해 로그인 불가. (참가자를 이메일+카카오로 만든 이유와 동일한 문제가 관리자에만 남아있었음)
+
+- **결정(사용자)**: 관리자 로그인 = **카카오 + 이메일/비밀번호**(구글 버튼 제거). 둘 다 카카오톡 인앱브라우저에서 동작
+- **판별 확장**: 서버 `requireAdmin`은 이메일(`ADMIN_EMAILS`)로 관리자 판별 → 카카오는 이메일을 안 넘기거나 다를 수 있음 → 판별을 **이메일 OR 고유 ID(uid)** 둘 다 허용
+  - `api/_lib/auth.js`: `ADMIN_USER_IDS`(쉼표 구분 Supabase user id) 추가. `isAdminUserId`·`isAdminUser(user)` 신설, `requireAdmin`이 `isAdminUser` 사용
+  - `src/lib/adminApi.js`: `signInWithKakao()`(redirect `/admin`) 추가. `signInWithGoogle`은 미사용 레거시로 보존
+  - `src/pages/admin/AdminLogin.jsx`: **카카오 버튼 + 이메일/비밀번호 폼**(로그인/‘비밀번호 설정(가입)’ 토글, 참가자 `Login.jsx`와 동일 패턴, `authApi.signInEmail/signUpEmail` 재사용). 로그인 성공 → `onAuthChange`→`evaluate`가 권한확인·이동. "권한 없음" 화면에 **본인 이메일+고유 ID 표시**(부트스트랩 폴백)
+- **관리자 이메일**(사용자 제공): 카카오 계정 이메일 junominu=`junominu@kakao.com`, gggcp1234=`gggcp1234@gmail.com`. `ADMIN_EMAILS`에 `junominu@kakao.com` 추가(기존 `junominu@gmail.com`,`gggcp1234@gmail.com` 유지). 이메일/비밀번호는 `ADMIN_EMAILS`에 있는 이메일로 '비밀번호 설정(가입)' 후 로그인하면 관리자
+- **부트스트랩 폴백**: 혹시 로그인 시 이메일이 안 잡히면 "권한 없음" 화면의 uid를 `ADMIN_USER_IDS`에 넣고 재배포. **락아웃 위험 없음**
+- ⏳ **환경변수 갱신 대기**: `ADMIN_EMAILS`에 `junominu@kakao.com` 추가 → Vercel(Prod+Preview)+로컬 `.env` → `vercel --prod` 재배포
+- ✅ `npm run build` 통과. Supabase Kakao provider·Redirect URLs(`.../**`)는 참가자용으로 이미 설정됨(추가 콘솔 작업 불필요)
+
 ## 4. 마이그레이션 상태 (운영 DB `lxszaaxjgauyyjqgagjz`, 공유 프로젝트)
 - ✅ **`supabase/schema.sql` 전체 1회 실행 완료** → `classregi_*` 테이블 3 + RPC 4 + 인덱스/RLS + 버킷 `classregi-materials` 생성. anon RPC 200 확인
 - 포함 내용: `email`·`form_data jsonb` 컬럼, `classregi_register_paid`(9인자), `classregi_confirm_paid`, `access_token`, 개인 토큰 자료 흐름 등 최신 전부

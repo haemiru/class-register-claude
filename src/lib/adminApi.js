@@ -13,7 +13,16 @@ export function onAuthChange(cb) {
   return () => data.subscription.unsubscribe()
 }
 
-// Google 로그인 시작 → 로그인 후 /admin 으로 복귀
+// 카카오 로그인 시작 → 로그인 후 /admin 으로 복귀.
+// 카카오톡 인앱브라우저에서도 동작(구글 OAuth와 달리 차단되지 않음).
+export function signInWithKakao() {
+  return supabase.auth.signInWithOAuth({
+    provider: 'kakao',
+    options: { redirectTo: `${window.location.origin}/admin` },
+  })
+}
+
+// (레거시) 구글 로그인 — 데스크톱 등에서 필요 시 사용. 인앱브라우저에서는 차단됨.
 export function signInWithGoogle() {
   return supabase.auth.signInWithOAuth({
     provider: 'google',

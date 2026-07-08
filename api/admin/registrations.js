@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     const [{ data: cls }, { data: registrations, error }] = await Promise.all([
       supabase
         .from('classregi_classes')
-        .select('id, title, starts_at, capacity, fee, form_type')
+        .select('id, title, starts_at, capacity, fee, form_type, form_schema')
         .eq('id', classId)
         .single(),
       supabase

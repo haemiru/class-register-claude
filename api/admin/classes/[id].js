@@ -2,7 +2,7 @@ import { getAdminClient } from '../../_lib/supabaseAdmin.js'
 import { requireAdmin } from '../../_lib/auth.js'
 
 // Design Ref: §5 — PATCH /api/admin/classes/:id (수정·마감) · DELETE (삭제)
-const EDITABLE = ['title', 'description', 'location', 'starts_at', 'capacity', 'fee', 'status', 'form_type']
+const EDITABLE = ['title', 'description', 'location', 'starts_at', 'capacity', 'fee', 'status', 'form_type', 'form_schema']
 const BUCKET = 'classregi-materials'
 
 export default async function handler(req, res) {
@@ -25,6 +25,7 @@ export default async function handler(req, res) {
     }
     if (patch.capacity != null) patch.capacity = Number(patch.capacity)
     if (patch.fee != null) patch.fee = Number(patch.fee)
+    if ('form_schema' in patch && !Array.isArray(patch.form_schema)) patch.form_schema = []
     if (Object.keys(patch).length === 0) return res.status(400).json({ error: 'NO_FIELDS' })
 
     const { data, error } = await supabase

@@ -122,12 +122,29 @@
 - **앱 아이콘 제작**(카카오 앱 아이콘용, 128px): 브랜드 팔레트+잎+호흡물결 3안 생성. **A안 채택**(세이지 배경+아이보리 잎+상단 호흡물결) → `~/Downloads/brainscent-icon-A-128.png`. 원본 SVG(icon-A/B/C.svg)는 세션 스크래치패드(임시). 필요 시 SVG로 재렌더 가능
 - ✅ E2E는 사용자가 직접 검증 예정(무료 클래스 생성해서 가입→로그인→무료 신청→`/account`→자료 받기). 참가비 0 클래스는 결제 생략 경로라 라이브 키에도 돈 안 나감 → 실사용 무료 클래스 겸 테스트 수단
 
+### 2026-07-08 세션 — 클래스별 동적 신청 폼(폼 빌더) 전환
+> 목표: 문진 유형 select(`baby`/`basic` 하드코딩) → **구글 폼처럼 클래스마다 질문을 직접 구성**하는 폼 빌더. 필드 정의를 코드가 아니라 클래스 데이터(`form_schema jsonb`)에 저장.
+
+- **결정(사용자)**: 폼 구조 = **질문 평면 리스트**(섹션 없음) / 질문 유형 **7종**(단답·장문·숫자·날짜·객관식단일·객관식복수·드롭다운) / 기존 `baby`·`basic`은 **'빠른 시작' 프리셋**으로 유지(삭제 X). 기존 클래스·과거 신청은 폴백으로 그대로 렌더
+- **데이터 모델**: `classregi_classes.form_schema jsonb` 추가. 필드 = `{key,label,type,required,options?,placeholder?,hint?}` 평면 배열. `key`는 `f1,f2,…` 빌더 자동 발급(편집 시 유지). `form_type`은 레거시 폴백·프리셋용으로 유지. **우선순위**: `form_schema` 비어있지 않으면 그것, 아니면 `form_type` 템플릿
+- **구현**:
+  - `src/lib/formSchema.js`(허브): `FIELD_TYPES`·`OPTION_TYPES`·`templateToSchema(type)`(프리셋 평탄화)·`resolveFields(cls)`·`emptyFormDataFromFields`·`blankField`·`PRIVACY_ITEMS_TEXT` 추가. 기존 템플릿/`FIELD_BY_KEY`는 폴백·프리셋용 유지
+  - `src/components/FormBuilder.jsx`(신규): 질문 추가/삭제/위·아래 이동, 유형·필수·보기항목·도움말 편집, 상단 프리셋(빈 폼/베이비/기본) 채우기
+  - `AdminClasses.jsx`: 등록·수정 폼의 "문진 유형" select → `<FormBuilder>`. `empty`에 `form_schema:[]`, `startEdit`는 레거시 클래스면 `templateToSchema(form_type)`로 채워 자연 이전, 페이로드에 `form_schema`
+  - API: `classes/index.js` POST + `classes/[id].js` PATCH(EDITABLE)에 `form_schema`(배열 검증), `registrations.js` GET class select에 `form_schema` 추가
+  - `RegistrationForm.jsx`: `resolveFields(cls)`로 렌더/검증, 단일 "신청 정보" 섹션(평면), `FieldControl`에 `select`(드롭다운)·`number` 케이스 추가, 개인정보 수집항목 `PRIVACY_ITEMS_TEXT`
+  - `AdminRegistrations.jsx`: `FormDetail`이 `resolveFields(cls)` 기준 라벨 매핑 + 스키마 밖 잔여 key는 `FIELD_BY_KEY`/원문 폴백
+  - **DB**: `supabase/migration-form-schema.sql` 신설(`form_schema` 컬럼 + 공개 RPC 2개 재정의). `schema.sql`도 반영
+- ✅ `npm run build` 통과 + dev 서버 200 확인. **DB 마이그레이션·E2E는 사용자 진행 예정**(아래 §4·§5)
+- ⏳ 커밋/푸시 전(작업트리). 배포 순서: **`migration-form-schema.sql` 실행 → 커밋/푸시** → E2E
+
 ## 4. 마이그레이션 상태 (운영 DB `lxszaaxjgauyyjqgagjz`, 공유 프로젝트)
 - ✅ **`supabase/schema.sql` 전체 1회 실행 완료** → `classregi_*` 테이블 3 + RPC 4 + 인덱스/RLS + 버킷 `classregi-materials` 생성. anon RPC 200 확인
 - 포함 내용: `email`·`form_data jsonb` 컬럼, `classregi_register_paid`(9인자), `classregi_confirm_paid`, `access_token`, 개인 토큰 자료 흐름 등 최신 전부
 - `supabase/migration-form-fields.sql`은 **기존 `cr_` DB 업그레이드용**(이번 신규 실행엔 불필요, 참고용 보관)
 - ✅ **`supabase/migration-form-type.sql` 실행 완료**(2026-07-07): `form_type` 컬럼 + 공개 RPC 2개 재정의
 - ✅ **`supabase/migration-accounts.sql` 실행 완료**(2026-07-07): `user_id` 컬럼·인덱스 + `register_paid` 10인자 + `classregi_my_registrations` RPC
+- ⏳ **`supabase/migration-form-schema.sql` 실행 대기**(2026-07-08 작성): `form_schema jsonb` 컬럼 + 공개 RPC 2개(`open_classes`/`class_detail`) 반환에 `form_schema` 추가. **폼 빌더 배포 전 SQL Editor에서 1회 실행 필요**
 - **schema.sql 이 유일한 최신 소스.** 새/다른 프로젝트는 schema.sql 1회 실행이면 됨(위 마이그레이션 내용 모두 포함)
 
 ## 5. 다음 할 일 (돌아오면 **★여기부터★**)
@@ -136,8 +153,9 @@
 회원가입/계정까지 배포돼 **핵심 기능은 완성**. 다음 세션은 대개 **사용자가 말하는 개선사항을 §3 세션 로그 참고해 수정 → 커밋/푸시 or `vercel --prod`** 흐름. 최신 배포 상태·파일 위치는 §3(특히 2026-07-07 마지막 세션)과 아래 참고.
 
 - **사용자 E2E는 직접 진행 중**: 무료 클래스 만들어 가입→로그인→무료 신청→`/account`→자료 받기 확인. 문제 나오면 그 지점부터 수정
+- ⏳ **폼 빌더 배포 남음**(2026-07-08): `migration-form-schema.sql` 실행 → 커밋/푸시 → E2E(관리자 클래스 생성 시 질문 구성 → 참가자 폼 렌더 → 신청자 조회 라벨 확인 → 기존 baby 클래스 폴백 회귀)
 - **개선 작업 시 주소록**:
-  - 신청 폼/문진: `src/components/RegistrationForm.jsx` + 문항 정의 `src/lib/formSchema.js`(템플릿 `baby`/`basic`)
+  - 신청 폼/문진: `src/components/RegistrationForm.jsx` + 필드 허브 `src/lib/formSchema.js`(`resolveFields`/`FIELD_TYPES`, 레거시 템플릿 `baby`/`basic`은 폴백·프리셋). **동적 폼은 클래스 `form_schema`가 소스**, 빌더 `src/components/FormBuilder.jsx`
   - 관리자 클래스 관리: `src/pages/admin/AdminClasses.jsx`(등록/수정 폼, 참가비 0=무료), 신청자 조회 `AdminRegistrations.jsx`
   - 인증/계정: `src/lib/authApi.js`, `src/pages/Login.jsx`·`Account.jsx`, 서버 가드 `api/_lib/auth.js`(`getAuthUser`/`requireAdmin`/`ADMIN_EMAILS`)
   - 배포: 커밋/푸시하면 Vercel 자동 배포. env만 바꾸면 재배포 필요 → `npx vercel --prod --yes`

@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { adminApi, getSession, signOut, uploadMaterial } from '../../lib/adminApi.js'
 import Field, { inputCls } from '../../components/Field.jsx'
+import FormBuilder from '../../components/FormBuilder.jsx'
 import { won, formatDateTime, formatBytes, toDatetimeLocal } from '../../lib/format.js'
-import { FORM_TYPE_OPTIONS, DEFAULT_FORM_TYPE } from '../../lib/formSchema.js'
+import { templateToSchema } from '../../lib/formSchema.js'
 
 // Design Ref: §6 — 관리자 클래스 관리: 등록 폼 + 목록(수정/마감)
-const empty = { title: '', description: '', location: '', starts_at: '', capacity: 20, fee: 0, form_type: DEFAULT_FORM_TYPE }
+const empty = { title: '', description: '', location: '', starts_at: '', capacity: 20, fee: 0, form_schema: [] }
 
 export default function AdminClasses() {
   const nav = useNavigate()
@@ -126,14 +127,8 @@ export default function AdminClasses() {
         <Field label="설명">
           <textarea rows="3" className={inputCls} value={form.description} onChange={set('description')} />
         </Field>
-        <Field label="신청 문진 유형" hint="참가자 신청 폼에 표시할 문진 양식">
-          <select className={inputCls} value={form.form_type} onChange={set('form_type')}>
-            {FORM_TYPE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+        <Field label="신청 폼 항목" hint="참가자가 신청 시 작성할 질문을 구성하세요.">
+          <FormBuilder value={form.form_schema} onChange={(fs) => setForm((f) => ({ ...f, form_schema: fs }))} />
         </Field>
         <Field label="클래스 자료 (선택)" hint="결제 완료자만 다운로드할 수 있습니다. 여러 개 가능.">
           <label className="inline-block cursor-pointer text-sm text-sage-dark underline">
@@ -204,7 +199,8 @@ function ClassCard({ c, onChanged }) {
       starts_at: toDatetimeLocal(c.starts_at),
       capacity: c.capacity,
       fee: c.fee,
-      form_type: c.form_type || DEFAULT_FORM_TYPE,
+      // 레거시 클래스(form_schema 없음)는 옛 템플릿을 빌더에 채워 자연스럽게 이전
+      form_schema: c.form_schema?.length ? c.form_schema : templateToSchema(c.form_type),
     })
     setError('')
     setEditing(true)
@@ -227,7 +223,7 @@ function ClassCard({ c, onChanged }) {
         starts_at: new Date(form.starts_at).toISOString(),
         capacity: Number(form.capacity),
         fee: Number(form.fee),
-        form_type: form.form_type,
+        form_schema: form.form_schema,
       })
       setEditing(false)
       await onChanged()
@@ -295,14 +291,8 @@ function ClassCard({ c, onChanged }) {
           <Field label="설명">
             <textarea rows="3" className={inputCls} value={form.description} onChange={set('description')} />
           </Field>
-          <Field label="신청 문진 유형" hint="참가자 신청 폼에 표시할 문진 양식">
-            <select className={inputCls} value={form.form_type} onChange={set('form_type')}>
-              {FORM_TYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+          <Field label="신청 폼 항목" hint="참가자가 신청 시 작성할 질문을 구성하세요.">
+            <FormBuilder value={form.form_schema} onChange={(fs) => setForm((f) => ({ ...f, form_schema: fs }))} />
           </Field>
           {error && <p className="text-sm text-rose-600">{error}</p>}
           <div className="flex gap-2">

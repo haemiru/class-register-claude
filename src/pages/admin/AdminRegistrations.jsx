@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { adminApi, getSession, signOut } from '../../lib/adminApi.js'
 import { won, formatDateTime } from '../../lib/format.js'
-import { templateFields } from '../../lib/formSchema.js'
+import { resolveFields, FIELD_BY_KEY } from '../../lib/formSchema.js'
 
 // Design Ref: §6 — 클래스별 신청자 목록 (Plan SC-5)
 const statusLabel = { paid: '결제완료', pending: '대기', failed: '실패', refunded: '환불됨' }
@@ -140,7 +140,7 @@ export default function AdminRegistrations() {
                   {expanded.has(r.id) && (
                     <tr className="border-t bg-slate-50/60">
                       <td colSpan={7} className="px-4 py-3">
-                        <FormDetail formData={r.form_data} note={r.note} formType={data.class?.form_type} />
+                        <FormDetail formData={r.form_data} note={r.note} cls={data.class} />
                       </td>
                     </tr>
                   )}
@@ -154,12 +154,22 @@ export default function AdminRegistrations() {
   )
 }
 
-// 신청 문진 상세(form_data)를 라벨과 함께 표시 (클래스 form_type 템플릿 기준)
-function FormDetail({ formData, note, formType }) {
+// 신청 문진 상세(form_data)를 라벨과 함께 표시 (클래스 form_schema 기준)
+function FormDetail({ formData, note, cls }) {
   const fd = formData || {}
-  const rows = templateFields(formType).map((f) => ({ label: f.label, value: fd[f.key], type: f.type })).filter(
-    (r) => (Array.isArray(r.value) ? r.value.length > 0 : r.value !== '' && r.value != null),
-  )
+  const fields = resolveFields(cls || {})
+  const hasValue = (v) => (Array.isArray(v) ? v.length > 0 : v !== '' && v != null)
+
+  // 1) 현재 스키마 필드 순서대로
+  const rows = fields
+    .map((f) => ({ key: f.key, label: f.label, value: fd[f.key] }))
+    .filter((r) => hasValue(r.value))
+  // 2) 스키마에 없는 잔여 답변(레거시/유형 변경)도 라벨 폴백으로 표시
+  const known = new Set(fields.map((f) => f.key))
+  const extra = Object.keys(fd)
+    .filter((k) => k !== 'privacyConsent' && !known.has(k) && hasValue(fd[k]))
+    .map((k) => ({ key: k, label: FIELD_BY_KEY[k]?.label || k, value: fd[k] }))
+  rows.push(...extra)
 
   return (
     <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
@@ -167,7 +177,7 @@ function FormDetail({ formData, note, formType }) {
         <p className="text-xs text-slate-400">문진 답변이 없습니다.</p>
       )}
       {rows.map((r) => (
-        <div key={r.label} className="flex flex-col gap-1">
+        <div key={r.key} className="flex flex-col gap-1">
           <dt className="text-xs font-semibold text-slate-500">{r.label}</dt>
           <dd className="text-sm text-slate-700">
             {Array.isArray(r.value) ? (

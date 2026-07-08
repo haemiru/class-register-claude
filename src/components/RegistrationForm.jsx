@@ -3,20 +3,20 @@ import { useNavigate, Link } from 'react-router-dom'
 import Field, { inputCls } from './Field.jsx'
 import { requestCardPayment } from '../lib/toss.js'
 import { won, formatPhone } from '../lib/format.js'
-import { getTemplate, emptyFormData, PRIVACY_NOTICE } from '../lib/formSchema.js'
+import { resolveFields, emptyFormDataFromFields, PRIVACY_NOTICE, PRIVACY_ITEMS_TEXT } from '../lib/formSchema.js'
 import { getSession, getAccessToken } from '../lib/authApi.js'
 
 // Design Ref: §6, §7, §8 — 상세 신청서. 로그인 필수 → 유료: pre-register 후 결제 / 무료: 즉시 확정
-// 문진 내용은 클래스의 form_type 에 맞는 템플릿(getTemplate)으로 렌더한다.
+// 문진 내용은 클래스의 form_schema(폼 빌더)로 렌더한다. 없으면 레거시 form_type 템플릿으로 폴백.
 export default function RegistrationForm({ cls, disabled }) {
   const nav = useNavigate()
   const isFree = Number(cls.fee) === 0
-  const template = getTemplate(cls.form_type)
+  const fields = resolveFields(cls)
   const [authState, setAuthState] = useState('loading') // loading | in | out
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
-  const [data, setData] = useState(() => emptyFormData(cls.form_type))
+  const [data, setData] = useState(() => emptyFormDataFromFields(fields))
   const [consent, setConsent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -44,8 +44,8 @@ export default function RegistrationForm({ cls, disabled }) {
   function validate() {
     if (!name.trim() || !phone.trim() || !email.trim()) return '보호자 성함·연락처·이메일을 입력해 주세요.'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return '이메일 형식을 확인해 주세요.'
-    // 템플릿 문진 필드 검사 (required 누락 + 날짜 미래 방지)
-    for (const f of template.sections.flatMap((s) => s.fields)) {
+    // 문진 필드 검사 (required 누락 + 날짜 미래 방지)
+    for (const f of fields) {
       const v = data[f.key]
       const empty = Array.isArray(v) ? v.length === 0 : !String(v ?? '').trim()
       if (f.required && empty) return `${f.label}을(를) 입력해 주세요.`
@@ -178,21 +178,21 @@ export default function RegistrationForm({ cls, disabled }) {
         </Field>
       </div>
 
-      {/* 문진 섹션 (클래스 form_type 템플릿) */}
-      {template.sections.map((section) => (
-        <div key={section.title} className="space-y-4">
-          <SectionTitle>{section.title}</SectionTitle>
-          {section.fields.map((f) => (
+      {/* 문진 항목 (클래스 form_schema) */}
+      {fields.length > 0 && (
+        <div className="space-y-4">
+          <SectionTitle>신청 정보</SectionTitle>
+          {fields.map((f) => (
             <FieldControl key={f.key} field={f} value={data[f.key]} setField={setField} toggleCheck={toggleCheck} />
           ))}
         </div>
-      ))}
+      )}
 
       {/* 개인정보 동의 */}
       <div className="space-y-3">
         <SectionTitle>개인정보 수집·이용 동의</SectionTitle>
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-500">
-          <p>· 수집 항목: {template.privacyItems}</p>
+          <p>· 수집 항목: {PRIVACY_ITEMS_TEXT}</p>
           <p>· 수집 목적: {PRIVACY_NOTICE.purpose}</p>
           <p>· 보관 기간: {PRIVACY_NOTICE.retention}</p>
         </div>
@@ -237,7 +237,7 @@ function FieldControl({ field, value, setField, toggleCheck }) {
     return (
       <Field label={label} required={required} hint={hint}>
         <div className="flex flex-wrap gap-2">
-          {options.map((opt) => (
+          {(options || []).map((opt) => (
             <Pill key={opt} active={value === opt} onClick={() => setField(key, value === opt ? '' : opt)}>
               {opt}
             </Pill>
@@ -252,7 +252,7 @@ function FieldControl({ field, value, setField, toggleCheck }) {
     return (
       <Field label={label} required={required} hint={hint}>
         <div className="flex flex-wrap gap-2">
-          {options.map((opt) => (
+          {(options || []).map((opt) => (
             <Pill key={opt} active={arr.includes(opt)} onClick={() => toggleCheck(key, opt)}>
               {opt}
             </Pill>
@@ -277,12 +277,28 @@ function FieldControl({ field, value, setField, toggleCheck }) {
     )
   }
 
-  // text | date
+  if (type === 'select') {
+    return (
+      <Field label={label} required={required} hint={hint}>
+        <select className={inputCls} value={value || ''} onChange={(e) => setField(key, e.target.value)}>
+          <option value="">선택해 주세요</option>
+          {(options || []).map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      </Field>
+    )
+  }
+
+  // text | date | number
   return (
     <Field label={label} required={required} hint={hint}>
       <input
-        type={type === 'date' ? 'date' : 'text'}
-        lang={type === 'date' ? undefined : 'ko'}
+        type={type === 'date' ? 'date' : type === 'number' ? 'number' : 'text'}
+        lang={type === 'text' ? 'ko' : undefined}
+        inputMode={type === 'number' ? 'numeric' : undefined}
         className={inputCls}
         value={value}
         onChange={(e) => setField(key, e.target.value)}

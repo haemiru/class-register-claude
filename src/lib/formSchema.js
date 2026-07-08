@@ -188,3 +188,64 @@ export const PRIVACY_NOTICE = {
   purpose: '수강 신청 확인, 수업 안내, 자료 제공, 사후 관리',
   retention: '수업 종료 후 1년',
 }
+
+// 동적 폼 수집 항목 안내 문구(클래스별 form_schema 사용 시 공통).
+export const PRIVACY_ITEMS_TEXT = '보호자 성함·연락처·이메일 및 신청 폼에 입력한 정보'
+
+// ── 동적 폼(폼 빌더) ─────────────────────────────────────
+// 클래스마다 classregi_classes.form_schema(jsonb)에 아래 형태의 "필드 평면 배열"을 저장한다.
+//   { key, label, type, required?, options?, placeholder?, hint? }
+// 신청 폼/관리자 조회가 form_type 하드코딩 템플릿 대신 이 배열을 우선 사용한다.
+
+// 폼 빌더에서 고를 수 있는 질문 유형. hasOptions=true 는 보기 항목(options)이 필요.
+export const FIELD_TYPES = [
+  { value: 'text', label: '단답', hasOptions: false },
+  { value: 'textarea', label: '장문', hasOptions: false },
+  { value: 'number', label: '숫자', hasOptions: false },
+  { value: 'date', label: '날짜', hasOptions: false },
+  { value: 'radio', label: '객관식(단일 선택)', hasOptions: true },
+  { value: 'checkbox', label: '객관식(복수 선택)', hasOptions: true },
+  { value: 'select', label: '드롭다운', hasOptions: true },
+]
+
+export const OPTION_TYPES = new Set(FIELD_TYPES.filter((t) => t.hasOptions).map((t) => t.value))
+
+// 레거시 템플릿(baby/basic)을 평면 필드 배열로 변환 → 폼 빌더 "빠른 시작" 프리셋에 채워 넣는다.
+export function templateToSchema(type) {
+  return getTemplate(type).sections.flatMap((s) =>
+    s.fields.map((f) => ({
+      key: f.key,
+      label: f.label,
+      type: f.type,
+      required: !!f.required,
+      ...(OPTION_TYPES.has(f.type) ? { options: [...(f.options || [])] } : {}),
+      ...(f.placeholder ? { placeholder: f.placeholder } : {}),
+      ...(f.hint ? { hint: f.hint } : {}),
+    })),
+  )
+}
+
+// 클래스가 실제로 렌더할 필드 배열을 결정한다.
+// form_schema 가 비어있지 않은 배열이면 그것을, 아니면 레거시 form_type 템플릿을 사용.
+export function resolveFields(cls) {
+  const schema = cls?.form_schema
+  if (Array.isArray(schema) && schema.length > 0) return schema
+  return templateFields(cls?.form_type)
+}
+
+// 필드 배열로부터 초기 form_data 상태 (checkbox → 배열, 그 외 → '')
+export function emptyFormDataFromFields(fields) {
+  const out = {}
+  for (const f of fields || []) out[f.key] = f.type === 'checkbox' ? [] : ''
+  return out
+}
+
+// 폼 빌더: 기존 필드들과 겹치지 않는 새 key(f1, f2, …)를 발급하며 빈 질문을 만든다.
+export function blankField(existingFields = []) {
+  let max = 0
+  for (const f of existingFields) {
+    const m = /^f(\d+)$/.exec(f.key || '')
+    if (m) max = Math.max(max, Number(m[1]))
+  }
+  return { key: `f${max + 1}`, label: '', type: 'text', required: false, options: [] }
+}

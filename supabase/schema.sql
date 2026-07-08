@@ -11,7 +11,8 @@ create table if not exists classregi_classes (
   capacity    int  not null check (capacity > 0),
   fee         int  not null check (fee >= 0),
   status      text not null default 'open',   -- 'open' | 'closed'
-  form_type   text not null default 'baby',    -- 신청 문진 템플릿 유형(src/lib/formSchema.js: 'baby'|'basic')
+  form_type   text not null default 'baby',    -- 레거시 문진 템플릿 유형(폴백/프리셋용: 'baby'|'basic')
+  form_schema jsonb not null default '[]'::jsonb, -- 동적 신청 폼 필드 배열(폼 빌더). 비면 form_type 템플릿으로 폴백
   created_at  timestamptz not null default now()
 );
 
@@ -80,13 +81,14 @@ drop function if exists classregi_open_classes();
 create or replace function classregi_open_classes()
 returns table (
   id uuid, title text, description text, location text,
-  starts_at timestamptz, capacity int, fee int, status text, form_type text,
+  starts_at timestamptz, capacity int, fee int, status text,
+  form_type text, form_schema jsonb,
   paid_count bigint
 )
 language sql security definer set search_path = public
 as $$
   select c.id, c.title, c.description, c.location, c.starts_at,
-         c.capacity, c.fee, c.status, c.form_type,
+         c.capacity, c.fee, c.status, c.form_type, c.form_schema,
          coalesce(p.cnt, 0) as paid_count
   from classregi_classes c
   left join (
@@ -103,13 +105,14 @@ drop function if exists classregi_class_detail(uuid);
 create or replace function classregi_class_detail(p_id uuid)
 returns table (
   id uuid, title text, description text, location text,
-  starts_at timestamptz, capacity int, fee int, status text, form_type text,
+  starts_at timestamptz, capacity int, fee int, status text,
+  form_type text, form_schema jsonb,
   paid_count bigint
 )
 language sql security definer set search_path = public
 as $$
   select c.id, c.title, c.description, c.location, c.starts_at,
-         c.capacity, c.fee, c.status, c.form_type,
+         c.capacity, c.fee, c.status, c.form_type, c.form_schema,
          coalesce((select count(*) from classregi_registrations
                    where class_id = c.id and payment_status = 'paid'), 0) as paid_count
   from classregi_classes c
